@@ -6,12 +6,12 @@
   <meta name="theme-color" content="#0c1522">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="description" content="色の連鎖で鉱脈を砕き、落盤をかわして地下1,200mへ。装備と成長を組み合わせる採掘ローグライトRPG。iPhone・PC対応。">
-  <title>DRILL DELVE — 深層の探掘者</title>
+  <meta name="description" content="壁を砕いて遺跡を攻略。落石・爆薬・水や溶岩を使う戦闘と、鉱脈から得る4属性の術式。分岐する18の部屋を探索するローグライトRPG。">
+  <title>RELIC DELVE — 崩落の遺跡</title>
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./icon.png">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./style.css?v=1.0.0">
+  <link rel="stylesheet" href="./style.css?v=2.0.0">
 </head>
 <body>
   <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
@@ -29,27 +29,29 @@
   <div id="layout">
     <aside class="field-panel left-panel" aria-hidden="true">
       <div class="field-kicker">EXPLORER'S LOG / 001</div>
-      <h2>地底に、<br>自分だけの<br><em>道を掘れ。</em></h2>
+      <h2>遺跡を砕き、<br>自分だけの<br><em>道を拓く。</em></h2>
       <div class="diagram"><span></span><span></span><span></span><span></span><b>↓</b><span></span><span></span><span></span><span></span></div>
-      <p>色をつなぐ。<br>落盤を読む。<br>深層で、強くなる。</p>
+      <p>地形を使う。<br>鉱脈をつなぐ。<br>遺跡を、攻略する。</p>
       <div class="field-rule"></div>
-      <small>6 BIOMES · 1,200 METERS<br>ONE MORE DELVE.</small>
+      <small>6 RUINS · 18 CHAMBERS<br>ONE MORE DELVE.</small>
     </aside>
     <main class="play-shell" id="game-shell">
       <header class="hud">
-        <div class="topline"><div class="brand"><svg><use href="#i-drill"/></svg><span>DRILL <b>DELVE</b></span><i>v1.0</i></div><div class="header-actions"><button id="sound" class="icon-button" aria-label="サウンドを切り替える" aria-pressed="true"><svg><use href="#i-sound"/></svg></button><button id="pause" class="icon-button" aria-label="一時停止"><svg><use href="#i-pause"/></svg></button></div></div>
-        <div class="mission"><span id="biome-name">翠晶の洞窟</span><div><span class="depth-label">DEPTH</span> <strong id="depth">0</strong><span class="unit">m</span><span id="floor-badge">1 / 6</span></div></div>
-        <div class="meters"><div class="meter hp"><div class="meter-icon"><svg><use href="#i-heart"/></svg></div><div class="meter-track"><div id="hp-fill" class="meter-fill"></div><span id="hp-text">100 / 100</span></div></div><div class="meter air"><div class="meter-icon"><svg><use href="#i-air"/></svg></div><div class="meter-track"><div id="air-fill" class="meter-fill"></div><span id="air-text">100 / 100</span></div></div></div>
-        <div class="runline"><span class="level">LV <b id="level">1</b><i><i id="xp-fill"></i></i></span><span class="gold"><svg><use href="#i-gem"/></svg><b id="gold">0</b> G</span><span class="guard"><svg><use href="#i-shield"/></svg><b id="shield">1</b></span><span id="drill-name">探掘ドリル</span></div>
+        <div class="topline"><div class="brand"><svg><use href="#i-gem"/></svg><span>RELIC <b>DELVE</b></span><i>v2.0</i></div><div class="header-actions"><button id="sound" class="icon-button" aria-label="サウンドを切り替える" aria-pressed="true"><svg><use href="#i-sound"/></svg></button><button id="pause" class="icon-button" aria-label="一時停止"><svg><use href="#i-pause"/></svg></button></div></div>
+        <div class="mission"><span id="biome-name">翠晶の忘却庭園</span><div><span class="depth-label">CHAMBER</span> <strong id="depth">0</strong><span class="unit">/ 18</span><span id="floor-badge">1 / 6</span></div></div>
+        <div class="meters"><div class="meter hp"><div class="meter-icon"><svg><use href="#i-heart"/></svg></div><div class="meter-track"><div id="hp-fill" class="meter-fill"></div><span id="hp-text">100 / 100</span></div></div><div class="meter quest"><div class="meter-icon">◇</div><div class="meter-track"><div id="goal-fill" class="meter-fill"></div><span id="goal-count">目標 0 / 2</span></div></div></div>
+        <div id="objective-text" class="objective-text">封印石を2基起動</div>
+        <div class="runline"><span class="level">LV <b id="level">1</b><i><i id="xp-fill"></i></i></span><span class="gold"><svg><use href="#i-gem"/></svg><b id="gold">0</b> G</span><span class="guard"><svg><use href="#i-shield"/></svg><b id="shield">1</b></span><span id="drill-name">遺跡ブレイカー</span></div>
+<div class="elements" id="elements" aria-label="属性術式の選択"><button id="element-0" data-element="0" class="element-button " style="--element-color:#75dba7" aria-label="翠命を選択" aria-pressed="false"><span>✚</span><small>翠命</small><b>10</b><em><i></i></em></button><button id="element-1" data-element="1" class="element-button selected" style="--element-color:#f3ad70" aria-label="熾火を選択" aria-pressed="true"><span>✦</span><small>熾火</small><b>10</b><em><i></i></em></button><button id="element-2" data-element="2" class="element-button " style="--element-color:#7ac9f1" aria-label="霜晶を選択" aria-pressed="false"><span>❄</span><small>霜晶</small><b>10</b><em><i></i></em></button><button id="element-3" data-element="3" class="element-button " style="--element-color:#b5a0f3" aria-label="紫電を選択" aria-pressed="false"><span>ϟ</span><small>紫電</small><b>10</b><em><i></i></em></button></div>
       </header>
-      <section class="viewport" id="viewport" aria-label="地下鉱脈のゲーム画面"><canvas id="game" aria-label="十字キーで掘削しながら下へ進みます。オレンジの予告が出たら落盤に注意。"></canvas><div class="boss-hud" id="boss-hud" hidden><div><span id="boss-name"></span><b id="boss-percent"></b></div><i><i id="boss-fill"></i></i></div><span class="corner-mark">EXPEDITION <b>01</b></span><span class="corner-version">DEEP EXPLORATION SYSTEM</span></section>
-      <footer class="controls" id="controls"><div class="dpad" id="dpad" aria-label="移動と掘削"><button class="dir up" data-dir="up" aria-label="上へ掘る"><svg><use href="#i-up"/></svg></button><button class="dir left" data-dir="left" aria-label="左へ掘る"><svg><use href="#i-up"/></svg></button><span class="pad-center"><svg><use href="#i-drill"/></svg></span><button class="dir right" data-dir="right" aria-label="右へ掘る"><svg><use href="#i-up"/></svg></button><button class="dir down" data-dir="down" aria-label="下へ掘る"><svg><use href="#i-up"/></svg></button></div><div class="control-hint">移動・掘削<br><span>長押しで連続</span></div><div class="action-pad"><button id="heal" class="heal-button" aria-label="回復薬を使う"><span>✚</span><b id="potions">2</b><small>回復</small></button><button id="pulse" class="pulse-button" aria-label="パルスを使う"><svg><use href="#i-pulse"/></svg><span id="pulse-text">パルス</span><i id="pulse-cooldown"></i></button><button id="rush" class="rush-button" aria-label="高速で掘る 長押し"><svg><use href="#i-drill"/></svg><strong>掘る</strong><small>長押しで高速</small></button></div></footer>
+      <section class="viewport" id="viewport" aria-label="地下遺跡のゲーム画面"><canvas id="game" aria-label="十字キーで上下左右に探索し、石碑や遺物に近づいて目的を達成します。岩の支えを壊すと落石が起きます。"></canvas><div class="boss-hud" id="boss-hud" hidden><div><span id="boss-name"></span><b id="boss-percent"></b></div><i><i id="boss-fill"></i></i></div><span class="corner-mark">RUIN EXPLORATION <b>02</b></span><span class="corner-version">TERRAIN IS YOUR WEAPON</span></section>
+      <footer class="controls" id="controls"><div class="dpad" id="dpad" aria-label="移動と掘削"><button class="dir up" data-dir="up" aria-label="上へ掘る"><svg><use href="#i-up"/></svg></button><button class="dir left" data-dir="left" aria-label="左へ掘る"><svg><use href="#i-up"/></svg></button><span class="pad-center"><svg><use href="#i-drill"/></svg></span><button class="dir right" data-dir="right" aria-label="右へ掘る"><svg><use href="#i-up"/></svg></button><button class="dir down" data-dir="down" aria-label="下へ掘る"><svg><use href="#i-up"/></svg></button></div><div class="control-hint">移動・掘削<br><span>長押しで連続</span></div><div class="action-pad"><button id="heal" class="heal-button" aria-label="回復薬を使う"><span>✚</span><b id="potions">2</b><small>回復</small></button><button id="pulse" class="pulse-button" aria-label="パルスを使う"><svg><use href="#i-pulse"/></svg><span id="pulse-text">パルス</span><i id="pulse-cooldown"></i></button><button id="rush" class="rush-button" aria-label="選択した属性の術式を発動 長押し"><svg><use href="#i-pulse"/></svg><strong id="cast-name">爆破</strong><small id="cast-cost">結晶 8 / 長押し</small></button></div></footer>
       <div id="overlay" class="overlay scrollable"></div>
       <div id="status" role="status" class="sr-only" aria-live="polite"></div>
     </main>
-    <aside class="field-panel right-panel"><div class="field-kicker">FIELD NOTES</div><h3>探掘の心得</h3><ol><li><b>色のかたまりを狙う</b><p>同じ色はまとめて消える。5個以上で連鎖ボーナス。</p></li><li><b>頭上を見上げる</b><p>支えのない鉱石は落ちる。揺れとオレンジの予告が合図。</p></li><li><b>酸素が命綱</b><p>O₂カプセルへ道をつなぎ、奥のゲートを目指そう。</p></li></ol><div class="key-notes"><span>方向キー / WASD</span> 移動・掘削<br><span>SPACE</span> 高速掘削<br><span>X</span> パルス　<span>C</span> 回復<br><span>ESC</span> 一時停止</div><button id="guide-side" class="text-button"><svg><use href="#i-book"/></svg>フィールドガイド</button></aside>
+    <aside class="field-panel right-panel"><div class="field-kicker">FIELD NOTES</div><h3>遺跡の心得</h3><ol><li><b>地形を味方に</b><p>岩の支えを砕く。爆薬を起爆する。強敵を地形で倒そう。</p></li><li><b>鉱脈が術式になる</b><p>4色の鉱脈は結晶の源。爆破・凍結・回復・雷を使い分ける。</p></li><li><b>部屋の目的を果たす</b><p>封印解除、遺物の持ち帰り、番兵の撃破。出口への道はひとつじゃない。</p></li></ol><div class="key-notes"><span>方向キー / WASD</span> 移動・掘削<br><span>SPACE</span> 属性術式　<span>1–4</span> 属性選択<br><span>X</span> パルス　<span>C</span> 回復<br><span>ESC</span> 一時停止</div><button id="guide-side" class="text-button"><svg><use href="#i-book"/></svg>フィールドガイド</button></aside>
   </div>
   <noscript>このゲームを遊ぶにはJavaScriptを有効にしてください。</noscript>
-  <script type="module" src="./src/app.mjs?v=1.0.0"></script>
+  <script type="module" src="./src/app.mjs?v=2.0.0"></script>
 </body>
 </html>

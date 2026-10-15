@@ -1,7 +1,7 @@
 {
-  "name": "DRILL DELVE — 深層の探掘者",
-  "short_name": "DRILL DELVE",
-  "description": "色の連鎖と落盤、装備と成長。地下1,200mを目指す採掘ローグライトRPG。",
+  "name": "RELIC DELVE — 崩落の遺跡",
+  "short_name": "RELIC DELVE",
+  "description": "地形を武器に遺跡を攻略。4属性の術式と分岐する18の部屋。",
   "lang": "ja",
   "id": "./",
   "start_url": "./",
