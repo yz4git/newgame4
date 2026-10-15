@@ -10,7 +10,13 @@ export const SPECIAL_ENEMIES=Object.keys(ENEMY_TYPES);
 const steps=[[0,-1],[1,0],[0,1],[-1,0]];
 const dist=(a,b)=>Math.abs(a.x-b.x)+Math.abs(a.y-b.y);
 export const heading=(a,b)=>Math.abs(b.x-a.x)>Math.abs(b.y-a.y)?[Math.sign(b.x-a.x)||1,0]:[0,Math.sign(b.y-a.y)||1];
-export function enemyCanEnter(g,e,x,y){return !g.at(x,y)&&!g.occupied(x,y)&&!g.enemies.some(o=>o!==e&&o.x===x&&o.y===y)&&!(g.boss&&Math.abs(x-g.boss.x)<=1&&Math.abs(y-g.boss.y)<=1);}
+export function enemyCanEnter(g,e,x,y){return !(g.player.x===x&&g.player.y===y)&&!g.at(x,y)&&!g.occupied(x,y)&&!g.enemies.some(o=>o!==e&&o.x===x&&o.y===y)&&!(g.boss&&Math.abs(x-g.boss.x)<=1&&Math.abs(y-g.boss.y)<=1);}
+export function noticesPlayer(g,e){
+  const p=g.player,d=dist(e,p);if(d>7)return false;if(e.type==='burrower'&&d<=4)return true;
+  const n=Math.max(Math.abs(e.x-p.x),Math.abs(e.y-p.y));
+  for(let i=1;i<n;i++){const x=Math.round(e.x+(p.x-e.x)*i/n),y=Math.round(e.y+(p.y-e.y)*i/n);if(g.at(x,y)||g.occupied(x,y))return false;}
+  return true;
+}
 function warn(g,e,intent){e.intent=intent;g.emit('enemyWarn');}
 export function specialEnemyStep(g,e){
   const p=g.player,[dx,dy]=heading(e,p),d=dist(e,p);
@@ -20,7 +26,7 @@ export function specialEnemyStep(g,e){
   if(e.type==='burrower'){
     const choices=steps.map(([sx,sy])=>({x:e.x+sx,y:e.y+sy})).sort((a,b)=>dist(a,p)-dist(b,p));
     for(const q of choices){
-      if(dist(q,p)>=d||g.occupied(q.x,q.y)||g.isFixture(q.x,q.y)||g.enemies.some(o=>o!==e&&o.x===q.x&&o.y===q.y)||g.boss&&Math.abs(q.x-g.boss.x)<=1&&Math.abs(q.y-g.boss.y)<=1)continue;
+      if(dist(q,p)<1||dist(q,p)>=d||g.occupied(q.x,q.y)||g.isFixture(q.x,q.y)||g.enemies.some(o=>o!==e&&o.x===q.x&&o.y===q.y)||g.boss&&Math.abs(q.x-g.boss.x)<=1&&Math.abs(q.y-g.boss.y)<=1)continue;
       const t=g.at(q.x,q.y);if(t&&![0,1,2,3,10].includes(t.c))continue;
       if(t)g.clearCells([q],{chain:false,rewards:false,source:'burrow'});e.x=q.x;e.y=q.y;e.timer=.75;return true;
     }
@@ -40,6 +46,7 @@ export function advanceEnemyIntent(g,e,dt){
   a.delay-=dt;if(a.delay>0)return;
   if(a.kind==='rush'){
     const x=e.x+a.dx,y=e.y+a.dy;
+    if(x===g.player.x&&y===g.player.y){g.damage(14+g.stage,'突進スカラベに突き飛ばされた');e.intent=null;e.stun=.4;e.timer=1.1;return;}
     if(enemyCanEnter(g,e,x,y)){e.x=x;e.y=y;a.left--;a.delay=.09;if(a.left<=0)e.intent=null;}
     else{e.intent=null;e.stun=.65;e.timer=1.1;}
   }else if(a.kind==='spit'){
