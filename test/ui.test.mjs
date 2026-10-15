@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 
-test('game shell boots, accepts independent movement/cast pointers, switches element and saves on pause',async()=>{
+test('game shell boots, accepts independent movement/drilling pointers, switches element and saves on pause',async()=>{
   const html=await readFile(new URL('../index.html',import.meta.url),'utf8'),nodes=new Map(),windowEvents=new Map(),documentEvents=new Map(),storage=new Map(),frames=[];
   class Node{
     constructor(id='',dataset={}){this.id=id;this.dataset=dataset;this.listeners=new Map();this.classes=new Set();this.children=new Map();this.disabled=false;this.style={setProperty(k,v){this[k]=v;}};this.classList={add:(x)=>this.classes.add(x),remove:(x)=>this.classes.delete(x),toggle:(x,on)=>{if(on??!this.classes.has(x))this.classes.add(x);else this.classes.delete(x);},contains:x=>this.classes.has(x)};}
@@ -25,8 +25,8 @@ test('game shell boots, accepts independent movement/cast pointers, switches ele
   const button=new Node('',{action:'new'});nodes.get('overlay').fire('click',{target:button});assert.equal(nodes.get('overlay').hidden,true);
   nodes.get('dpad').fire('pointerdown',{pointerId:1,clientX:110,clientY:60,target:dirs.find(n=>n.dataset.dir==='right')});nodes.get('rush').fire('pointerdown',{pointerId:2});assert.equal(nodes.get('dpad').capture,1);assert.equal(nodes.get('rush').capture,2);assert.ok(nodes.get('rush').classList.contains('held'));
   for(let i=0;i<80;i++)frames.shift()(100+i*1000/60);
-  nodes.get('elements').fire('click',{target:new Node('',{element:'2'})});assert.equal(nodes.get('element-2')['aria-pressed'],'true');
+  assert.equal(JSON.parse(storage.get('drill-delve-run-v3')).state.stats.casts,0);nodes.get('elements').fire('click',{target:new Node('',{element:'2'})});nodes.get('pulse').fire('click');for(let i=80;i<84;i++)frames.shift()(100+i*1000/60);assert.equal(nodes.get('element-2')['aria-pressed'],'true');
   nodes.get('rush').fire('pointercancel',{pointerId:2});nodes.get('dpad').fire('pointerup',{pointerId:1});assert.ok(!nodes.get('rush').classList.contains('held'));assert.ok(dirs.every(n=>!n.classList.contains('held')));
-  windowEvents.get('blur')();const save=JSON.parse(storage.get('drill-delve-run-v2'));assert.equal(save.version,2);assert.equal(save.state.player.element,2);assert.ok(save.state.stats.casts>0);assert.equal(save.state.player.charges.length,4);assert.equal(save.state.mode,'play');assert.match(nodes.get('overlay').innerHTML,/ひとやすみ/);
-  nodes.get('overlay').fire('click',{target:new Node('',{action:'guide'})});assert.match(nodes.get('overlay').innerHTML,/地形そのものを武器に/);nodes.get('overlay').fire('click',{target:new Node('',{action:'guide-back'})});assert.match(nodes.get('overlay').innerHTML,/ひとやすみ/);
+  windowEvents.get('blur')();const save=JSON.parse(storage.get('drill-delve-run-v3'));assert.equal(save.version,3);assert.equal(save.state.player.element,2);assert.ok(save.state.stats.casts>0);assert.equal(save.state.player.charges.length,4);assert.equal(save.state.mode,'play');assert.match(nodes.get('overlay').innerHTML,/ひとやすみ/);
+  nodes.get('overlay').fire('click',{target:new Node('',{action:'guide'})});assert.match(nodes.get('overlay').innerHTML,/着地で連鎖/);nodes.get('overlay').fire('click',{target:new Node('',{action:'guide-back'})});assert.match(nodes.get('overlay').innerHTML,/ひとやすみ/);
 });

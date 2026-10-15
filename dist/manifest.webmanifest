@@ -1,7 +1,7 @@
 {
   "name": "RELIC DELVE — 崩落の遺跡",
   "short_name": "RELIC DELVE",
-  "description": "地形を武器に遺跡を攻略。4属性の術式と分岐する18の部屋。",
+  "description": "掘削・重力・落下連鎖。4属性の共鳴で掘り方を変える採掘ローグライト。",
   "lang": "ja",
   "id": "./",
   "start_url": "./",
