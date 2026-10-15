@@ -12,6 +12,8 @@ Crystals earned by mining power four support abilities: green heals and slows th
 
 Six regions contain three strata each. Choose the next stratum's tradeoff at safe exits: resonant seams, richer side deposits, heavy-rock layers or a faster collapse. The second, fourth and sixth regions end at a guardian core; destroying its mineral pillars damages it, and falling stone is another way to break it. Missing a pillar never locks the exit permanently.
 
+Each stratum now has six nests of three or four enemies along the descent route (18 early, 24 in deeper regions, plus sentries in heavy-rock strata). Fragile swarm creatures mix with stronger leaders, making falling terrain and area resonance useful without turning each encounter into a long fight. Distant creatures wait until the explorer approaches; crowds cannot stack into one cell. Existing active saves gain nests only in the unexplored depth ahead.
+
 XP levels accumulate while drilling. Perk choices and equipment comparisons are held for safe stratum exits, preserving continuous excavation and cascades. Camp shops and permanent upgrades support different builds. The earlier game's base upgrades and active exploration build are retained when migrating into the new shafts.
 
 ## Controls

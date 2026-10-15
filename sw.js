@@ -1,5 +1,5 @@
-const CACHE='drill-delve-2.1.0';
-const FILES=['./','./index.html','./style.css?v=2.1.0','./src/app.mjs?v=2.1.0','./src/engine.mjs','./src/render.mjs','./src/audio.mjs','./icon.svg','./icon.png','./manifest.webmanifest'];
+const CACHE='drill-delve-2.1.1';
+const FILES=['./','./index.html','./style.css?v=2.1.1','./src/app.mjs?v=2.1.1','./src/engine.mjs','./src/render.mjs','./src/audio.mjs','./icon.svg','./icon.png','./manifest.webmanifest'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('drill-delve-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
 // Network first makes published updates visible immediately; cache is the offline fallback.

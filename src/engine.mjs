@@ -1,4 +1,4 @@
-export const VERSION='2.1.0';
+export const VERSION='2.1.1';
 export const COLS=13, ROWS=76;
 export const PALETTE=['#75dba7','#f3ad70','#7ac9f1','#b5a0f3'];
 export const ELEMENTS=[
@@ -94,8 +94,6 @@ export class Game{
     }
     // Hard seams demand a route choice, but always include softer openings.
     for(const y of [25,47]){const gap=2+Math.floor(rand()*8);for(let x=1;x<COLS-1;x++)this.grid[y][x]={c:Math.abs(x-gap)<2?Math.floor(rand()*4):11,hp:Math.abs(x-gap)<2?1:2};}
-    // Small cavities reveal depth without turning the run into corridor walking.
-    for(let y=17;y<ROWS-11;y+=16){const x=2+Math.floor(rand()*7);this.carve(x,y,3,2);this.enemies.push(this.makeEnemy(x+1,y+1,'slime',rand));}
     for(let y=12;y<ROWS-10;y+=12){const x=1+Math.floor(rand()*11);this.grid[y][x]={c:y%24===0?7:5,hp:1};this.grid[y+1][cap(x+(rand()<.5?-2:2),1,COLS-2)]={c:6,hp:1};}
     const tx=2+Math.floor(rand()*9);this.grid[38][tx]={c:8,hp:1};
     if(this.roomType==='relic'){for(const y of [19,45,60]){const x=1+Math.floor(rand()*11);this.grid[y][x]={c:y===45?8:6,hp:1};this.fixtures.push({x,y,kind:'relic',done:false});}}
@@ -107,11 +105,29 @@ export class Game{
       for(const [x,y,color]of [[3,ROWS-15,1],[9,ROWS-12,3]]){for(let dx=-1;dx<=1;dx++)this.grid[y][x+dx]={c:color,hp:1};this.fixtures.push({x,y,kind:'seal',done:false});}
       this.grid[ROWS-10][6]={c:4,hp:4};this.grid[ROWS-9][6]={c:10,hp:1};
     }
+    this.populateEnemies();
     this.goal={type:this.roomType,progress:0,total:100,complete:false};
     const p=this.player;p.x=6;p.y=2;p.rx=6;p.ry=2;p.maxY=2;p.dir='down';p.invuln=1.2;p.drillTimer=.12;p.pulseTimer=0;p.castTimer=0;p.fallTimer=0;p.jumpTimer=0;
     this.toast(ROOM_TYPES[this.roomType].name+' / 下へ掘り抜こう');this.emit('floor');
   }
-  makeEnemy(x,y,type,rand=this.rng){const hp=(type==='sentry'?64:type==='armored'?52:type==='hunter'?180:28)+this.stage*8;return {x,y,rx:x,ry:y,type,kind:type==='hunter'?'void':this.biome.enemy,hp,maxHp:hp,timer:1+rand(),stun:0,flash:0,objective:false};}
+  populateEnemies(fromY=0){
+    const rand=random(this.seed+this.roomNumber*104729),size=this.stage>=3?4:3;
+    // Six small nests cross the descent route; solid seams still separate every encounter.
+    // A separate seed also lets old saves gain only the nests ahead of their explorer.
+    for(let y=9;y<=59;y+=10){
+      const center=5+Math.floor(rand()*3),xs=[center,center-1,center+1,center-2,center+2];
+      if(y<fromY)continue;
+      for(let yy=y;yy<=y+1;yy++)for(const x of xs){const t=this.at(x,yy);if(!this.isFixture(x,yy)&&!this.occupied(x,yy)&&(!t||t.c<4||t.c===10||t.c===11))this.carve(x,yy);}
+      let placed=0;
+      for(const yy of [y+1,y])for(const x of xs){
+        if(placed>=size||this.at(x,yy)||this.occupied(x,yy)||this.isFixture(x,yy)||this.enemies.some(e=>e.x===x&&e.y===yy))continue;
+        const type=placed===0?(this.stage>=2&&y%30===29?'armored':'slime'):'swarm';
+        this.enemies.push(this.makeEnemy(x,yy,type,rand));placed++;
+      }
+    }
+    this.encounterVersion=1;
+  }
+  makeEnemy(x,y,type,rand=this.rng){const hp=type==='swarm'?14+this.stage*4:(type==='sentry'?64:type==='armored'?52:type==='hunter'?180:28)+this.stage*8;return {x,y,rx:x,ry:y,type,kind:type==='hunter'?'void':this.biome.enemy,hp,maxHp:hp,timer:1+rand(),stun:0,flash:0,objective:false};}
   component(x,y){const t=this.at(x,y);if(!t)return [];if(t.c>3)return [{x,y}];const seen=new Set([`${x},${y}`]),q=[{x,y}];for(let i=0;i<q.length;i++)for(const [dx,dy]of Object.values(DIRS)){const nx=q[i].x+dx,ny=q[i].y+dy,k=`${nx},${ny}`;if(inside(nx,ny)&&!seen.has(k)&&this.grid[ny][nx]?.c===t.c){seen.add(k);q.push({x:nx,y:ny});}}return q;}
   burst(x,y,color,n=9){for(let i=0;i<Math.min(n,30);i++){const a=this.rng()*Math.PI*2,s=.4+this.rng()*3;this.particles.push({x:x+.5,y:y+.5,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:.3+this.rng()*.4,size:.04+this.rng()*.12,color});}if(this.particles.length>300)this.particles.splice(0,this.particles.length-300);}
   float(s,x,y,color='#fff'){this.texts.push({s,x:x+.5,y:y+.2,color,life:1.2});}
@@ -145,7 +161,7 @@ export class Game{
   }
   visit(){const k=`${this.player.x},${this.player.y}`;if(!this.visited.includes(k))this.visited.push(k);}
   attackEnemy(e,power,source='magic'){if(!this.enemies.includes(e))return;const terrain=['rock','barrel','lava'].includes(source);if(e.type==='armored'||e.type==='sentry')power*=source==='dig'?.45:1;if(terrain)power*=1+(this.player.upgrades.collapse||0)*.5;e.hp-=power;e.stun=Math.max(e.stun,source==='frost'?2.5:.3);e.flash=.15;this.burst(e.x,e.y,terrain?'#ffcf89':'#d6ecff',7);this.emit('hit');
-    if(e.hp<=0){this.enemies.splice(this.enemies.indexOf(e),1);this.stats.kills++;this.gainXP(18+this.stage*2);this.gainGold(6+this.stage);this.charge(2);if(terrain){this.stats.terrainKills++;this.gainXP(12);this.float('地形撃破！',e.x,e.y,'#ffda8f');this.emit('chain',{count:6});if(this.player.upgrades.bombAir){this.charge(5*this.player.upgrades.bombAir);this.heal(8*this.player.upgrades.bombAir);}}
+    if(e.hp<=0){const reward=e.type==='swarm'?.5:1;this.enemies.splice(this.enemies.indexOf(e),1);this.stats.kills++;this.gainXP((18+this.stage*2)*reward);this.gainGold((6+this.stage)*reward);this.charge(2*reward);if(terrain){this.stats.terrainKills++;this.gainXP(12*reward);this.float('地形撃破！',e.x,e.y,'#ffda8f');this.emit('chain',{count:6});if(this.player.upgrades.bombAir){this.charge(5*this.player.upgrades.bombAir);this.heal(8*this.player.upgrades.bombAir);}}
       if(this.player.upgrades.leech)this.heal(5*this.player.upgrades.leech);this.emit('kill');}
   }
   hitBoss(power,source='magic'){if(!this.boss)return;const b=this.boss,terrain=['rock','barrel','lava'].includes(source),seals=this.fixtures.some(f=>!f.done)&&this.player.y<b.y+2;power*=terrain?(1+(this.player.upgrades.collapse||0)*.5):seals?.18:b.timer<1?1.3:.65;b.hp-=power;b.flash=.15;this.burst(b.x,b.y,terrain?'#ffc783':seals?'#9cacc2':'#efe0aa',8);this.emit('hit');if(b.hp<=0){this.burst(b.x,b.y,this.biome.tint,30);this.boss=null;this.stats.bosses++;this.gainXP(65);this.gainGold(40);this.heal(18);this.player.shield++;this.shake=.4;this.toast('守護者を撃破。封印を解いてゲートへ！');this.emit('bossDead');}}
@@ -157,9 +173,9 @@ export class Game{
     this.fx.push({kind:'blast',x:x+.5,y:y+.5,radius:radius+.8,color:PALETTE[1],life:.35,max:.35});this.burst(x,y,'#ffc487',20);this.shake=Math.max(this.shake,.14);this.emit('pulse');
   }
   cast(){const p=this.player;if(this.mode!=='play'||p.castTimer>0||p.charges[p.element]<this.castCost)return false;this.started=true;p.charges[p.element]-=this.castCost;p.castTimer=.65;this.stats.casts++;const [dx,dy]=DIRS[p.dir],element=p.element;this.emit('cast',{element});
-    if(element===0){this.collapseSlow=2.5;this.heal(Math.round(18*this.magic));for(const e of this.enemies)if(dist(e,p)<4){e.stun=Math.max(e.stun,1.4);this.attackEnemy(e,13*this.magic,'vital');}this.fx.push({kind:'vital',x:p.x+.5,y:p.y+.5,radius:2.5,color:PALETTE[0],life:.4,max:.4});this.float('+HP',p.x,p.y,PALETTE[0]);}
+    if(element===0){this.collapseSlow=2.5;this.heal(Math.round(18*this.magic));for(const e of [...this.enemies])if(dist(e,p)<4){e.stun=Math.max(e.stun,1.4);this.attackEnemy(e,13*this.magic,'vital');}this.fx.push({kind:'vital',x:p.x+.5,y:p.y+.5,radius:2.5,color:PALETTE[0],life:.4,max:.4});this.float('+HP',p.x,p.y,PALETTE[0]);}
     if(element===1)this.explode(cap(p.x+dx*3,1,COLS-2),cap(p.y+dy*3,1,ROWS-2),1,(48+(p.upgrades.edge||0)*3)*this.magic,'blast');
-    if(element===2){const cells=[],hit=new Set();let bossHit=false;for(let i=1;i<=6;i++){const x=p.x+dx*i,y=p.y+dy*i;if(!inside(x,y)||this.at(x,y)?.c===9)break;if(this.at(x,y))cells.push(...this.component(x,y));for(const e of this.enemies)if(Math.abs(e.x-x)+Math.abs(e.y-y)<=1&&!hit.has(e)){hit.add(e);e.stun=2.5;this.attackEnemy(e,28*this.magic,'frost');}if(this.boss&&!bossHit&&Math.abs(this.boss.x-x)<=1&&Math.abs(this.boss.y-y)<=1){bossHit=true;this.hitBoss(28*this.magic,'frost');}for(const f of this.falling)if(f.cells.some(c=>c.x===x&&Math.abs(c.y-y)<2))f.delay=Math.max(f.delay,2.5);}
+    if(element===2){const cells=[],hit=new Set();let bossHit=false;for(let i=1;i<=6;i++){const x=p.x+dx*i,y=p.y+dy*i;if(!inside(x,y)||this.at(x,y)?.c===9)break;if(this.at(x,y))cells.push(...this.component(x,y));for(const e of [...this.enemies])if(Math.abs(e.x-x)+Math.abs(e.y-y)<=1&&!hit.has(e)){hit.add(e);e.stun=2.5;this.attackEnemy(e,28*this.magic,'frost');}if(this.boss&&!bossHit&&Math.abs(this.boss.x-x)<=1&&Math.abs(this.boss.y-y)<=1){bossHit=true;this.hitBoss(28*this.magic,'frost');}for(const f of this.falling)if(f.cells.some(c=>c.x===x&&Math.abs(c.y-y)<2))f.delay=Math.max(f.delay,2.5);}
       this.clearCells(cells);this.fx.push({kind:'beam',x:p.x+.5,y:p.y+.5,x2:p.x+dx*6+.5,y2:p.y+dy*6+.5,color:PALETTE[2],life:.3,max:.3});}
     if(element===3){const foes=this.enemies.filter(e=>dist(e,p)<8).sort((a,b)=>dist(a,p)-dist(b,p)).slice(0,4);for(const e of foes){this.fx.push({kind:'beam',x:p.x+.5,y:p.y+.5,x2:e.x+.5,y2:e.y+.5,color:PALETTE[3],life:.3,max:.3});this.attackEnemy(e,38*this.magic,'arc');}if(this.boss&&dist(this.boss,p)<9)this.hitBoss(45*this.magic,'arc');const veins=[];for(let y=p.y-3;y<=p.y+3;y++)for(let x=p.x-3;x<=p.x+3;x++)if(inside(x,y)&&this.at(x,y)?.c===3)veins.push(...this.component(x,y));this.clearCells(veins);this.fx.push({kind:'vital',x:p.x+.5,y:p.y+.5,radius:3,color:PALETTE[3],life:.3,max:.3});}
     return true;
@@ -170,7 +186,7 @@ export class Game{
   fallGroup(x,y){const t=this.at(x,y);if(!t)return [];if(t.c<4)return this.component(x,y);if(t.c!==10)return [{x,y}];
     const q=[{x,y}],seen=new Set([`${x},${y}`]);for(let i=0;i<q.length;i++)for(const [dx,dy]of Object.values(DIRS)){const xx=q[i].x+dx,yy=q[i].y+dy,key=`${xx},${yy}`;if(inside(xx,yy)&&!seen.has(key)&&this.at(xx,yy)?.c===10){seen.add(key);q.push({x:xx,y:yy});}}return q;
   }
-  scanFalls(){const visited=new Set(),groups=[],top=Math.max(1,this.player.y-18),bottom=Math.min(ROWS-2,this.player.y+14);
+  scanFalls(){const visited=new Set(),groups=[],top=Math.max(1,this.player.y-18),bottom=Math.min(ROWS-2,this.player.y+7);
     for(let y=bottom;y>=top;y--)for(let x=1;x<COLS-1;x++){const t=this.grid[y][x],key=`${x},${y}`;if(!t||!([0,1,2,3,4,10,11].includes(t.c))||visited.has(key))continue;const group=this.fallGroup(x,y),members=new Set(group.map(c=>`${c.x},${c.y}`));for(const c of group)visited.add(`${c.x},${c.y}`);
       const supported=group.some(c=>c.y>=ROWS-2||!members.has(`${c.x},${c.y+1}`)&&(this.at(c.x,c.y+1)||this.occupied(c.x,c.y+1)));
       if(!supported&&group.length<90)groups.push(group);
@@ -212,8 +228,8 @@ export class Game{
   buy(id){if(this.mode!=='camp')return false;const it=this.shopStock.find(i=>i.id===id);if(!it||it.bought||this.player.gold<it.cost)return false;this.player.gold-=it.cost;it.bought=true;if(id==='heal')this.heal(60);if(id==='charge')this.charge(this.player.chargeMax);if(id==='shield')this.player.shield+=2;if(id==='potion')this.player.potions++;if(id==='drill')this.player.drill=it.item.id;this.emit('buy');return true;}
   nextFloor(){if(this.mode!=='camp'||this.stage>=5)return false;this.stage++;this.room=0;this.mode='play';this.loadFloor('runes');return true;}
   enemyStep(e){const p=this.player;if(e.type==='sentry'){if(dist(e,p)<=8){this.hazards.push({x:p.x,y:p.y,delay:.95,radius:0,damage:15+this.stage*2,kind:'bolt',hit:false});}e.timer=2.4;return;}
-    if(['spore','ember'].includes(e.kind)&&dist(e,p)<8){this.hazards.push({x:p.x,y:p.y,delay:.9,radius:e.kind==='ember'?1:0,damage:15+this.stage*2,kind:e.kind,hit:false});e.timer=2.1;return;}
-    const dirs=Object.values(DIRS).map(([dx,dy])=>({x:e.x+dx,y:e.y+dy})).filter(q=>inside(q.x,q.y)&&!this.enemies.some(o=>o!==e&&o.x===q.x&&o.y===q.y)&&!(this.boss&&Math.abs(q.x-this.boss.x)<=1&&Math.abs(q.y-this.boss.y)<=1)).sort((a,b)=>dist(a,p)-dist(b,p));const target=dirs.find(q=>!this.at(q.x,q.y));
+    if(e.type!=='swarm'&&['spore','ember'].includes(e.kind)&&dist(e,p)<8){this.hazards.push({x:p.x,y:p.y,delay:.9,radius:e.kind==='ember'?1:0,damage:15+this.stage*2,kind:e.kind,hit:false});e.timer=2.1;return;}
+    const dirs=Object.values(DIRS).map(([dx,dy])=>({x:e.x+dx,y:e.y+dy})).filter(q=>inside(q.x,q.y)&&!this.occupied(q.x,q.y)&&!this.enemies.some(o=>o!==e&&o.x===q.x&&o.y===q.y)&&!(this.boss&&Math.abs(q.x-this.boss.x)<=1&&Math.abs(q.y-this.boss.y)<=1)).sort((a,b)=>dist(a,p)-dist(b,p));const target=dirs.find(q=>!this.at(q.x,q.y));
     if(target&&dist(target,p)<dist(e,p)){e.x=target.x;e.y=target.y;}else if(e.type==='hunter'&&dirs[0]&&this.at(dirs[0].x,dirs[0].y)?.c!==9)this.clearCells([dirs[0]],{chain:false,rewards:false});
     e.timer=e.type==='hunter'?.42:Math.max(.52,1.1-this.stage*.07);
   }
@@ -228,12 +244,12 @@ export class Game{
     this.settleTimer-=dt;if(this.settleTimer<=0){this.scanFalls();this.settleTimer=.15;}this.updateFalls(dt);this.updateFluids(dt);if(this.mode!=='play')return;
 
     for(const h of this.hazards){h.delay-=dt;if(h.delay<=0&&!h.hit){h.hit=true;if(dist(h,p)<=h.radius)this.damage(h.damage,h.kind==='spore'?'毒胞子に倒された':'遺跡の術式に倒された');this.burst(h.x,h.y,h.kind==='spore'?'#bef7a6':'#ffba88',8);}}this.hazards=this.hazards.filter(h=>h.delay>-.3);
-    for(const e of [...this.enemies]){e.fallTimer=(e.fallTimer||0)+dt;if(e.kind!=='jelly'&&!this.at(e.x,e.y+1)&&!this.occupied(e.x,e.y+1)&&e.y<ROWS-2&&e.fallTimer>.2){e.y++;e.fallTimer=0;}e.timer-=dt;e.stun=Math.max(0,e.stun-dt);e.flash=Math.max(0,e.flash-dt);e.rx+=(e.x-e.rx)*Math.min(1,dt*12);e.ry+=(e.y-e.ry)*Math.min(1,dt*12);if(e.timer<=0&&e.stun<=0&&this.started&&dist(e,p)<13)this.enemyStep(e);if(dist(e,p)<=1&&e.stun<=0)this.damage(e.type==='hunter'?22:11+this.stage*2,'遺跡の魔物に倒された');}
-    if(this.boss){const b=this.boss;b.flash=Math.max(0,b.flash-dt);if(this.started&&dist(b,p)<16){b.timer-=dt;if(b.timer<=0){b.phase++;b.timer=b.hp<b.maxHp*.5?2.4:3.3;for(let i=-1;i<=1;i++)if(inside(p.x+i,p.y))this.hazards.push({x:p.x+i,y:p.y,delay:.85,radius:0,damage:24+this.stage*2,kind:'bolt',hit:false});if(b.phase%3===0&&this.enemies.length<5){this.enemies.push(this.makeEnemy(cap(b.x+3,1,COLS-2),b.y+2,'slime'));this.carve(cap(b.x+3,1,COLS-2),b.y+2);}this.emit('bossAttack');}if(Math.abs(p.x-b.x)<=1&&Math.abs(p.y-b.y)<=1)this.damage(24,'守護者に倒された');}}
+    for(const e of [...this.enemies]){if(e.y>p.y+8)continue;e.fallTimer=(e.fallTimer||0)+dt;const below=e.y+1,blocked=this.at(e.x,below)||this.occupied(e.x,below)||this.enemies.some(o=>o!==e&&o.x===e.x&&o.y===below)||this.boss&&Math.abs(e.x-this.boss.x)<=1&&Math.abs(below-this.boss.y)<=1;if(e.kind!=='jelly'&&!blocked&&e.y<ROWS-2&&e.fallTimer>.2){e.y++;e.fallTimer=0;}else if(blocked)e.fallTimer=0;e.timer-=dt;e.stun=Math.max(0,e.stun-dt);e.flash=Math.max(0,e.flash-dt);e.rx+=(e.x-e.rx)*Math.min(1,dt*12);e.ry+=(e.y-e.ry)*Math.min(1,dt*12);if(e.timer<=0&&e.stun<=0&&this.started&&dist(e,p)<13)this.enemyStep(e);if(dist(e,p)<=1&&e.stun<=0)this.damage(e.type==='hunter'?22:e.type==='swarm'?7+this.stage:11+this.stage*2,'遺跡の魔物に倒された');}
+    if(this.boss){const b=this.boss;b.flash=Math.max(0,b.flash-dt);if(this.started&&dist(b,p)<16){b.timer-=dt;if(b.timer<=0){b.phase++;b.timer=b.hp<b.maxHp*.5?2.4:3.3;for(let i=-1;i<=1;i++)if(inside(p.x+i,p.y))this.hazards.push({x:p.x+i,y:p.y,delay:.85,radius:0,damage:24+this.stage*2,kind:'bolt',hit:false});if(b.phase%3===0){for(const x of [b.x-3,b.x+3]){const y=b.y+2;if(this.enemies.filter(e=>dist(e,b)<8).length>=6)break;if(this.occupied(x,y)||this.enemies.some(e=>e.x===x&&e.y===y)||dist({x,y},p)<2)continue;this.carve(x,y);this.enemies.push(this.makeEnemy(x,y,'swarm'));}}this.emit('bossAttack');}if(Math.abs(p.x-b.x)<=1&&Math.abs(p.y-b.y)<=1)this.damage(24,'守護者に倒された');}}
     if(this.mode!=='play')return;this.checkObjective();if(this.mode==='play'&&this.ticks%180===0)this.emit('save');
   }
-  serialize(){const state={};for(const k of ['seed','stage','room','roomType','time','roomTime','ticks','player','stats','grid','falling','enemies','hazards','fluids','sources','fixtures','goal','exit','entrance','boss','pendingLevels','choice','loot','pendingLoot','postCheckpointMode','shopStock','routeOptions','started','hunterSpawned','visited','collapseFront','collapseSlow','postUpgradeMode','mode'])state[k]=this[k];state.rngState=this.rng.state();if(state.mode==='pause')state.mode='play';return {version:3,state};}
+  serialize(){const state={};for(const k of ['seed','stage','room','roomType','time','roomTime','ticks','player','stats','grid','falling','enemies','hazards','fluids','sources','fixtures','goal','exit','entrance','boss','pendingLevels','choice','loot','pendingLoot','postCheckpointMode','shopStock','routeOptions','started','hunterSpawned','visited','collapseFront','collapseSlow','postUpgradeMode','encounterVersion','mode'])state[k]=this[k];state.rngState=this.rng.state();if(state.mode==='pause')state.mode='play';return {version:3,state};}
   static restore(data,meta){const s=data?.state;if(data?.version===2&&s){if(!Number.isInteger(s.stage)||s.stage<0||s.stage>5||!Number.isInteger(s.room)||s.room<0||s.room>2||!s.player||!Number.isFinite(s.player.hp)||s.player.hp<=0||!Array.isArray(s.player.charges)||s.player.charges.length!==4)throw Error('Invalid legacy save');const g=new Game(s.seed,meta);g.stage=s.stage;g.room=s.room;g.player={...g.player,...structuredClone(s.player),fallTimer:0,jumpTimer:0,maxY:2};g.stats={...g.stats,...s.stats};g.pendingLevels=Math.min(1,s.pendingLevels||0);const legacyLoot=s.pendingLoot||s.loot;if(legacyLoot&&['drills','suits'].includes(legacyLoot.slot)&&EQUIPMENT[legacyLoot.slot].some(i=>i.id===legacyLoot.item?.id))g.pendingLoot=structuredClone(legacyLoot);g.loadFloor(ROOM_TYPES[s.roomType]?s.roomType:'runes');g.toast('探索記録を引き継いで地層の入口から再開');return g;}
     if(data?.version!==3||!s)throw Error('Invalid save');if(!Number.isInteger(s.stage)||s.stage<0||s.stage>5||!Number.isInteger(s.room)||s.room<0||s.room>2||!ROOM_TYPES[s.roomType])throw Error('Invalid room');if(!Array.isArray(s.grid)||s.grid.length!==ROWS||s.grid.some(r=>!Array.isArray(r)||r.length!==COLS||r.some(t=>t!==null&&(!t||!Number.isInteger(t.c)||t.c<0||t.c>12))))throw Error('Invalid map');const p=s.player;if(!p||!Number.isInteger(p.element)||p.element<0||p.element>3||!Number.isFinite(p.chargeMax)||p.chargeMax<=0||!Number.isInteger(p.x)||!Number.isInteger(p.y)||!inside(p.x,p.y)||!Number.isFinite(p.hp)||p.hp<=0||!Array.isArray(p.charges)||p.charges.length!==4||p.charges.some(n=>!Number.isFinite(n)||n<0))throw Error('Invalid player');if(!['play','level','loot','camp','route'].includes(s.mode)||!s.goal||!s.exit||!Array.isArray(s.fixtures)||!Array.isArray(s.hazards)||!Array.isArray(s.fluids))throw Error('Invalid state');
-    const g=new Game(s.seed,meta);for(const [k,v]of Object.entries(s))if(Object.hasOwn(g,k))g[k]=v;g.rng.restore(s.rngState);g.events=[];g.particles=[];g.texts=[];g.fx=[];g.player.rx=p.x;g.player.ry=p.y;g.player.invuln=1.5;return g;}
+    const g=new Game(s.seed,meta);for(const [k,v]of Object.entries(s))if(Object.hasOwn(g,k))g[k]=v;g.rng.restore(s.rngState);if(s.encounterVersion!==1&&s.mode==='play'){g.grid=structuredClone(g.grid);g.enemies=structuredClone(g.enemies);g.populateEnemies(Math.max(p.y,p.maxY||p.y)+5);}g.events=[];g.particles=[];g.texts=[];g.fx=[];g.player.rx=p.x;g.player.ry=p.y;g.player.invuln=1.5;return g;}
 }
