@@ -1,0 +1,13 @@
+{
+  "name": "DRILL DELVE — 深層の探掘者",
+  "short_name": "DRILL DELVE",
+  "description": "色の連鎖と落盤、装備と成長。地下1,200mを目指す採掘ローグライトRPG。",
+  "lang": "ja",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0c1522",
+  "theme_color": "#0c1522",
+  "icons": [{"src":"./icon.png","sizes":"180x180","type":"image/png","purpose":"any"},{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
