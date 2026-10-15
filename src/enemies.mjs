@@ -45,10 +45,12 @@ export function advanceEnemyIntent(g,e,dt){
   if(e.stun>0){e.intent=null;e.timer=Math.max(.8,e.timer);return;}
   a.delay-=dt;if(a.delay>0)return;
   if(a.kind==='rush'){
-    const x=e.x+a.dx,y=e.y+a.dy;
-    if(x===g.player.x&&y===g.player.y){g.damage(14+g.stage,'突進スカラベに突き飛ばされた');e.intent=null;e.stun=.4;e.timer=1.1;return;}
-    if(enemyCanEnter(g,e,x,y)){e.x=x;e.y=y;a.left--;a.delay=.09;if(a.left<=0)e.intent=null;}
-    else{e.intent=null;e.stun=.65;e.timer=1.1;}
+    for(let i=0,n=g.turnBased?a.left:1;i<n&&e.intent;i++){
+      const x=e.x+a.dx,y=e.y+a.dy;
+      if(x===g.player.x&&y===g.player.y){g.damage(14+g.stage,'突進スカラベに突き飛ばされた');e.intent=null;e.stun=.4;e.timer=1.1;return;}
+      if(enemyCanEnter(g,e,x,y)){e.x=x;e.y=y;a.left--;a.delay=.09;if(a.left<=0)e.intent=null;}
+      else{e.intent=null;e.stun=.65;e.timer=1.1;}
+    }
   }else if(a.kind==='spit'){
     e.intent=null;e.shots=(e.shots||0)+1;const volley=`${g.ticks}/${e.x}/${e.y}/${e.shots}`;
     for(let i=1;i<=6&&g.hazards.length<40;i++){const x=e.x+a.dx*i,y=e.y+a.dy*i;if(g.at(x,y)||g.occupied(x,y))break;g.hazards.push({x,y,delay:.08+i*.09,radius:0,damage:10+g.stage,kind:'spit',volley,hit:false});}

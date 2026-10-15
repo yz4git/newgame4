@@ -30,7 +30,7 @@ export function breakBossSeal(g){
 }
 export function updateBoss(g,dt){
   const b=prepareBoss(g.boss);if(!b)return;
-  const p=g.player;b.flash=Math.max(0,b.flash-dt);b.hitCooldown=Math.max(0,b.hitCooldown-dt);
+  const p=g.player;if(!g.turnBased)b.flash=Math.max(0,b.flash-dt);b.hitCooldown=Math.max(0,b.hitCooldown-dt);
   if(!b.engaged&&p.y>=b.y-6){b.engaged=true;g.toast('守護者が起動。光る列を避け、露出した核を狙おう');}
   if(!b.engaged)return;
   b.timer-=dt;

@@ -18,6 +18,14 @@ Six specialist creatures mix into nests from the first stratum and join reinforc
 
 XP levels accumulate while drilling. Perk choices and equipment comparisons are held for safe stratum exits, preserving continuous excavation and cascades. Camp shops and permanent upgrades support different builds. The earlier game's base upgrades and active exploration build are retained when migrating into the new shafts.
 
+## Turn mode
+
+Choose **ターン制** on the title screen for a new expedition, or switch the current expedition from the pause screen. **リアルタイム** retains continuous play. The choice for new expeditions is remembered, and each saved expedition retains its own mode and turn count. Existing saves continue in real time until switched.
+
+One direction tap performs one move, mining hit or attack. The large action button becomes **待つ**, advancing the world without choosing a movement direction. Resonance and a usable potion each cost one turn; element selection, menus, impossible movement and unavailable abilities cost none. A held direction or wait button repeats after 450 ms, then every 240 ms; release stops it and missed frames never produce catch-up turns. Space, period or 5 waits on keyboard. Quick taps are queued even if released before the next animation frame.
+
+Enemies, player gravity, falling groups, fluids, reinforcements, attack warnings, overhead collapse and cooldowns advance only on accepted actions. A falling group gets a whole decision of warning, then falls one cell per action. New creatures wait before acting. Ordinary creatures approach or attack, and a drill hit interrupts the target's response. Guardian column warnings allow two moves before striking. Freeze and resonance cooldowns count turns; equipment/perk speed bonuses become attack strength. Visual flashes can fade while the world clock is stopped. Saves preserve the pending warnings and timers without advancing a turn or adding invulnerability on resume.
+
 ## Controls
 
 - Touch: hold a direction to move and mine. Hold **掘る** for fast drilling. Up performs a one-cell hop from supported ground and mines overhead rock. Independent pointer capture supports movement plus drilling together.
@@ -35,4 +43,4 @@ npm run build
 
 Serve the repository root or `dist/` on a static host. `.openai/hosting.json` retains the existing Sites project identity. Save data is local to the browser and origin. Save format 3 restores moving masses, collapse position and queued exit rewards; format 2 migrates the character's equipment, growth and region into a newly generated shaft without overwriting the old record.
 
-`src/engine.mjs`: mining, gravity, support, cascades and progression. `src/boss.mjs`: guardian shells, warnings and core openings. `src/render.mjs`: Canvas world. `src/app.mjs`: input, UI and storage. `src/audio.mjs`: sound synthesis. Tests cover initial world suspension, actor collisions, supported nests, specialist actions, three-part guardian encounters and dodges, landing chains, uninterrupted drilling, mobile pointer input and save migration. The automated pilot uses ordinary movement, mining and resonance inputs, including stepping out of warned guardian columns.
+`src/engine.mjs`: mining, gravity, support, cascades and progression. `src/turn-input.mjs`: deliberate taps and held-input repetition. `src/boss.mjs`: guardian shells, warnings and core openings. `src/render.mjs`: Canvas world. `src/app.mjs`: input, UI and storage. `src/audio.mjs`: sound synthesis. Tests cover initial world suspension, actor collisions, supported nests, specialist actions, three-part guardian encounters and dodges, landing chains, uninterrupted drilling, mobile pointer input and save migration. The automated pilot uses ordinary movement, mining and resonance inputs, including stepping out of warned guardian columns.

@@ -1,6 +1,7 @@
 import {ENEMY_TYPES,SPECIAL_ENEMIES,specialEnemyStep,advanceEnemyIntent,specialEnemyDeath,spitBlocked,enemyCanEnter,noticesPlayer} from './enemies.mjs';
 import {prepareBoss,bossDamage,breakBossSeal,updateBoss} from './boss.mjs';
-export const VERSION='2.4.0';
+export const VERSION='2.5.0';
+export const TURN_TIME=1;
 export const COLS=13, ROWS=76;
 export const PALETTE=['#75dba7','#f3ad70','#7ac9f1','#b5a0f3'];
 export const ELEMENTS=[
@@ -41,7 +42,7 @@ export const EQUIPMENT={
 };
 export const UPGRADES=[
   {id:'edge',name:'螺旋研磨',kind:'BREAKER',icon:'✦',desc:'攻撃力 +5。硬岩の掘削も強化。'},
-  {id:'quick',name:'高速ベアリング',kind:'BREAKER',icon:'»',desc:'掘削・移動の間隔 −12%。'},
+  {id:'quick',name:'高速ベアリング',kind:'BREAKER',icon:'»',desc:'掘削・移動の間隔 −12%。ターン制は攻撃力 +12%。'},
   {id:'tank',name:'晶格拡張',kind:'CRYSTAL',icon:'◈',desc:'各属性の容量 +10。全属性を8補充。'},
   {id:'heart',name:'強化外殻',kind:'SURVIVAL',icon:'♥',desc:'最大HP +20。HPを25回復。'},
   {id:'chainAir',name:'共鳴回路',kind:'SYNERGY',icon:'♧',desc:'術式の結晶消費 −1。連鎖で追加の結晶を得る。'},
@@ -64,7 +65,8 @@ export function normalizeMeta(raw){const d={cores:0,best:0,runs:0,wins:0,talents
 export function talentCost(level){return 5+level*5;}
 
 export class Game{
-  constructor(seed=Date.now(),meta=null){
+  constructor(seed=Date.now(),meta=null,clockMode='realtime'){
+    this.clockMode=clockMode==='turn'?'turn':'realtime';this.turnCount=0;
     this.seed=seed>>>0;this.rng=random(this.seed);this.meta=normalizeMeta(meta);this.stage=0;this.room=0;this.roomType='runes';this.mode='play';this.time=0;this.roomTime=0;this.ticks=0;
     this.player={x:6,y:2,rx:6,ry:2,dir:'down',hp:100+this.meta.talents.hull*8,maxHp:100+this.meta.talents.hull*8,invuln:1,shield:1,potions:2,power:12+this.meta.talents.drill*2,drill:'starter',suit:'cloth',level:1,xp:0,nextXp:150,gold:0,drillTimer:0,pulseTimer:0,castTimer:0,fallTimer:0,jumpTimer:0,maxY:2,element:1,chargeMax:30+this.meta.talents.air*3,charges:[10,10,10,10],upgrades:{}};
     this.stats={blocks:0,chains:0,maxChain:0,kills:0,depth:0,gold:0,bosses:0,rooms:0,terrainKills:0,casts:0,cascades:0,reinforcements:0};
@@ -72,11 +74,13 @@ export class Game{
     this.choice=[];this.routeOptions=[];this.pendingLevels=0;this.loot=null;this.pendingLoot=null;this.postCheckpointMode='play';this.shopStock=[];this.boss=null;this.goal=null;this.exit=null;this.entrance={x:2,y:3};this.shake=0;this.flash=0;this.pulseFx=null;this.combo=0;this.comboTimer=0;this.message='';this.messageTimer=0;this.started=false;this.settleTimer=0;this.fluidTimer=0;this.hunterSpawned=false;this.collapseFront=-10;this.collapseSlow=0;this.postUpgradeMode='play';this.loadFloor('runes');
   }
   get biome(){return BIOMES[this.stage];}
+  get turnBased(){return this.clockMode==='turn';}
+  setClockMode(mode){if(!['realtime','turn'].includes(mode))return false;this.clockMode=mode;return true;}
   get roomNumber(){return this.stage*3+this.room+1;}
   get depth(){return Math.min(1200,Math.max(this.stats.depth,Math.floor(((this.roomNumber-1)+(Math.max(2,this.player.maxY||this.player.y)-2)/(ROWS-5))*1200/18)));}
   get drill(){return EQUIPMENT.drills.find(x=>x.id===this.player.drill)||EQUIPMENT.drills[0];}
   get suit(){return EQUIPMENT.suits.find(x=>x.id===this.player.suit)||EQUIPMENT.suits[0];}
-  get power(){return this.player.power+this.player.level*1.4+this.drill.power+(this.player.upgrades.edge||0)*5;}
+  get power(){const base=this.player.power+this.player.level*1.4+this.drill.power+(this.player.upgrades.edge||0)*5;return this.turnBased?base*(1+(this.player.upgrades.quick||0)*.12)/this.drill.speed:base;}
   get maxHp(){return this.player.maxHp+(this.suit.hp||0);}
   get magic(){return (this.drill.magic||1)*(this.suit.magic||1)*(1+(this.player.upgrades.magic||0)*.25);}
   get castCost(){return Math.max(4,8-(this.player.upgrades.chainAir||0));}
@@ -147,7 +151,7 @@ export class Game{
     }
     this.nestVersion=1;
   }
-  makeEnemy(x,y,type,rand=this.rng){const spec=ENEMY_TYPES[type],hp=spec?spec.hp+this.stage*spec.growth:type==='moth'?12+this.stage*3:type==='swarm'?14+this.stage*4:(type==='sentry'?64:type==='armored'?52:type==='hunter'?180:28)+this.stage*8;return {x,y,rx:x,ry:y,type,kind:spec?type:type==='hunter'?'void':this.biome.enemy,hp,maxHp:hp,timer:spec?.12+rand()*.14:type==='moth'?.28:1+rand(),awake:!spec,stun:0,flash:0,objective:false,guardDir:[0,-1],guardHits:0,guardBroken:0,frozen:0,intent:null};}
+  makeEnemy(x,y,type,rand=this.rng){const spec=ENEMY_TYPES[type],hp=spec?spec.hp+this.stage*spec.growth:type==='moth'?12+this.stage*3:type==='swarm'?14+this.stage*4:(type==='sentry'?64:type==='armored'?52:type==='hunter'?180:28)+this.stage*8;return {x,y,rx:x,ry:y,type,kind:spec?type:type==='hunter'?'void':this.biome.enemy,hp,maxHp:hp,timer:spec?.12+rand()*.14:type==='moth'?.28:1+rand(),awake:!spec,stun:0,flash:0,objective:false,guardDir:[0,-1],guardHits:0,guardBroken:0,frozen:0,intent:null,spawnedTurn:this.turnCount};}
   updateSwarms(dt){
     if(!this.started)return;
     const p=this.player,near=e=>Math.abs(e.y-p.y)<=6;
@@ -185,12 +189,12 @@ export class Game{
   component(x,y){const t=this.at(x,y);if(!t)return [];if(t.c>3)return [{x,y}];const seen=new Set([`${x},${y}`]),q=[{x,y}];for(let i=0;i<q.length;i++)for(const [dx,dy]of Object.values(DIRS)){const nx=q[i].x+dx,ny=q[i].y+dy,k=`${nx},${ny}`;if(inside(nx,ny)&&!seen.has(k)&&this.grid[ny][nx]?.c===t.c){seen.add(k);q.push({x:nx,y:ny});}}return q;}
   burst(x,y,color,n=9){for(let i=0;i<Math.min(n,30);i++){const a=this.rng()*Math.PI*2,s=.4+this.rng()*3;this.particles.push({x:x+.5,y:y+.5,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:.3+this.rng()*.4,size:.04+this.rng()*.12,color});}if(this.particles.length>300)this.particles.splice(0,this.particles.length-300);}
   float(s,x,y,color='#fff'){this.texts.push({s,x:x+.5,y:y+.2,color,life:1.2});}
-  heal(n){this.player.hp=cap(this.player.hp+n,0,this.maxHp);}
+  heal(n){if(this.mode==='dead')return;this.player.hp=cap(this.player.hp+n,0,this.maxHp);}
   charge(n,color=null){for(let i=0;i<4;i++)if(color===null||color===i)this.player.charges[i]=cap(this.player.charges[i]+n,0,this.player.chargeMax);}
   gainGold(n){n=Math.ceil(n*(1+(this.player.upgrades.pocket||0)*.35));this.player.gold+=n;this.stats.gold+=n;return n;}
   gainXP(n){this.player.xp+=n;while(this.player.xp>=this.player.nextXp){this.player.xp-=this.player.nextXp;this.player.level++;this.player.nextXp=Math.ceil(this.player.nextXp*1.32);this.pendingLevels=1;this.heal(4);}}
   damage(n,reason='遺跡の罠に倒された'){const p=this.player;if(p.invuln>0||this.mode!=='play')return;if(p.shield>0){p.shield--;p.invuln=1.1;this.float('GUARD',p.x,p.y,'#b4ffdb');this.burst(p.x,p.y,'#b3ffdf',16);this.emit('guard');return;}
-    n=Math.max(1,Math.round(n*(1-this.suit.armor)*Math.pow(.88,p.upgrades.guard||0)));p.hp=Math.max(0,p.hp-n);p.invuln=1.05;this.shake=.2;this.flash=.17;this.float('−'+n,p.x,p.y,'#ff9daa');this.emit('hurt');if(p.hp<=0)this.finish(false,reason);}
+    n=Math.max(1,Math.round(n*(1-this.suit.armor)*Math.pow(.88,p.upgrades.guard||0)));p.hp=Math.max(0,p.hp-n);p.invuln=this.turnBased?.9:1.05;this.shake=.2;this.flash=.17;this.float('−'+n,p.x,p.y,'#ff9daa');this.emit('hurt');if(p.hp<=0)this.finish(false,reason);}
   finish(win,reason){if(['dead','win'].includes(this.mode))return;this.mode=win?'win':'dead';this.reason=reason;if(win)this.stats.depth=1200;this.reward=Math.max(1,this.stats.rooms*2+this.stats.terrainKills+Math.floor(this.stats.gold/65)+(win?15:0));this.meta.cores+=this.reward;this.meta.best=Math.max(this.meta.best,this.stats.depth);this.meta.runs++;if(win)this.meta.wins++;this.emit('finish',{win});}
   clearCells(cells,{chain=true,rewards=true,source='dig'}={}){
     const removed=[],colors=[0,0,0,0],bombs=[];
@@ -232,7 +236,7 @@ export class Game{
     p.x=x;p.y=y;if(dir!=='up')p.fallTimer=0;this.visit();this.emit('step');return true;
   }
   visit(){const k=`${this.player.x},${this.player.y}`;if(!this.visited.includes(k))this.visited.push(k);}
-  attackEnemy(e,power,source='magic'){if(!this.enemies.includes(e))return;const terrain=['rock','barrel','lava'].includes(source),cold=source==='frost'||e.frozen>0;if(source==='frost'){e.frozen=2.5;e.guardBroken=3;e.guardHits=0;}if(e.type==='shield'&&source==='dig'&&!(e.guardBroken>0)){const [dx,dy]=e.guardDir||[0,-1];if((this.player.x-e.x)*dx+(this.player.y-e.y)*dy>0){power*=.25;e.guardHits=(e.guardHits||0)+1;if(e.guardHits>=3){e.guardBroken=2.4;e.guardHits=0;this.float('盾破り！',e.x,e.y,'#cedeff');}}}e.intent=null;if(e.type==='armored'||e.type==='sentry')power*=source==='dig'?.45:1;if(terrain)power*=1+(this.player.upgrades.collapse||0)*.5;e.hp-=power;e.stun=Math.max(e.stun,source==='frost'?2.5:.3);e.flash=.15;this.burst(e.x,e.y,terrain?'#ffcf89':'#d6ecff',7);this.emit('hit');
+  attackEnemy(e,power,source='magic'){if(!this.enemies.includes(e))return;if(this.turnBased)e.hitTurn=this.turnCount;const terrain=['rock','barrel','lava'].includes(source),cold=source==='frost'||e.frozen>0;if(source==='frost'){e.frozen=2.5;e.guardBroken=3;e.guardHits=0;}if(e.type==='shield'&&source==='dig'&&!(e.guardBroken>0)){const [dx,dy]=e.guardDir||[0,-1];if((this.player.x-e.x)*dx+(this.player.y-e.y)*dy>0){power*=.25;e.guardHits=(e.guardHits||0)+1;if(e.guardHits>=3){e.guardBroken=2.4;e.guardHits=0;this.float('盾破り！',e.x,e.y,'#cedeff');}}}e.intent=null;if(e.type==='armored'||e.type==='sentry')power*=source==='dig'?.45:1;if(terrain)power*=1+(this.player.upgrades.collapse||0)*.5;e.hp-=power;e.stun=Math.max(e.stun,source==='frost'?2.5:.3);e.flash=.15;this.burst(e.x,e.y,terrain?'#ffcf89':'#d6ecff',7);this.emit('hit');
     if(e.hp<=0){const reward=e.rewardScale??(e.type==='moth'?.25:e.type==='swarm'?.5:1);this.enemies.splice(this.enemies.indexOf(e),1);this.stats.kills++;this.gainXP((18+this.stage*2)*reward);this.gainGold((6+this.stage)*reward);this.charge(2*reward);if(terrain){this.stats.terrainKills++;this.gainXP(12*reward);this.float('地形撃破！',e.x,e.y,'#ffda8f');this.emit('chain',{count:6});if(this.player.upgrades.bombAir){this.charge(5*this.player.upgrades.bombAir);this.heal(8*this.player.upgrades.bombAir);}}
       if(this.player.upgrades.leech)this.heal(5*this.player.upgrades.leech);this.emit('kill');specialEnemyDeath(this,e,source,cold);}
   }
@@ -263,10 +267,10 @@ export class Game{
       const supported=group.some(c=>c.y>=ROWS-2||!members.has(`${c.x},${c.y+1}`)&&(this.at(c.x,c.y+1)||this.occupied(c.x,c.y+1)));
       if(!supported&&group.length<90)groups.push(group);
     }
-    for(const group of groups){const cells=group.map(c=>({...c,t:this.grid[c.y][c.x]})).filter(c=>c.t);for(const c of cells)this.grid[c.y][c.x]=null;if(cells.length)this.falling.push({cells,delay:.6,timer:0,offset:0,moved:0});}
+    for(const group of groups){const cells=group.map(c=>({...c,t:this.grid[c.y][c.x]})).filter(c=>c.t);for(const c of cells)this.grid[c.y][c.x]=null;if(cells.length)this.falling.push({cells,delay:.6,timer:0,offset:0,moved:0,bornTurn:this.turnCount});}
   }
   updateFalls(dt){
-    for(let i=this.falling.length-1;i>=0;i--){const f=this.falling[i];f.delay-=dt;if(f.delay>0)continue;f.timer+=dt;f.offset=Math.min(1,f.timer/.12);if(f.timer<.12)continue;f.timer=0;f.offset=0;
+    for(let i=this.falling.length-1;i>=0;i--){const f=this.falling[i];if(this.turnBased&&f.bornTurn===this.turnCount)continue;f.delay-=dt;if(f.delay>0)continue;f.timer+=dt;f.offset=Math.min(1,f.timer/.12);if(f.timer<.12)continue;f.timer=0;f.offset=0;
       const members=new Set(f.cells.map(c=>`${c.x},${c.y}`));const stopped=f.cells.some(c=>!members.has(`${c.x},${c.y+1}`)&&(!inside(c.x,c.y+1)||this.at(c.x,c.y+1)||this.falling.some((o,j)=>j!==i&&o.cells.some(k=>k.x===c.x&&k.y===c.y+1))));
       if(stopped){const landed=[];for(const c of f.cells){if(!inside(c.x,c.y)||this.at(c.x,c.y)||c.x===this.exit.x&&c.y===this.exit.y)continue;if(c.x===this.player.x&&c.y===this.player.y){this.damage(26+this.stage*2,'崩れた鉱脈に押し潰された');continue;}this.grid[c.y][c.x]=c.t;landed.push(c);}this.falling.splice(i,1);
         if(f.moved){this.emit('land');this.shake=Math.max(this.shake,.06);const checked=new Set();for(const c of landed){if(c.t.c>3||checked.has(`${c.x},${c.y}`))continue;const match=this.component(c.x,c.y);for(const m of match)checked.add(`${m.x},${m.y}`);if(match.length>=4){this.stats.cascades++;this.clearCells(match,{source:'landing'});}}}continue;
@@ -303,12 +307,13 @@ export class Game{
     if(!ENEMY_TYPES[e.type]&&!['swarm','moth'].includes(e.type)&&['spore','ember'].includes(e.kind)&&dist(e,p)<8){this.hazards.push({x:p.x,y:p.y,delay:.9,radius:e.kind==='ember'?1:0,damage:15+this.stage*2,kind:e.kind,hit:false});e.timer=2.1;return;}
     const dirs=Object.values(DIRS).map(([dx,dy])=>({x:e.x+dx,y:e.y+dy})).filter(q=>inside(q.x,q.y)&&!(q.x===p.x&&q.y===p.y)&&!this.occupied(q.x,q.y)&&!this.enemies.some(o=>o!==e&&o.x===q.x&&o.y===q.y)&&!(this.boss&&Math.abs(q.x-this.boss.x)<=1&&Math.abs(q.y-this.boss.y)<=1)).sort((a,b)=>dist(a,p)-dist(b,p));const target=dirs.find(q=>!this.at(q.x,q.y));
     if(target&&dist(target,p)<dist(e,p)){e.x=target.x;e.y=target.y;}else if(e.type==='hunter'&&dirs[0]&&this.at(dirs[0].x,dirs[0].y)?.c!==9)this.clearCells([dirs[0]],{chain:false,rewards:false});
-    e.timer=e.type==='moth'?Math.max(.2,.28-this.stage*.012):e.type==='hunter'?.42:Math.max(.52,1.1-this.stage*.07);
+    e.timer=this.turnBased?1:e.type==='moth'?Math.max(.2,.28-this.stage*.012):e.type==='hunter'?.42:Math.max(.52,1.1-this.stage*.07);
   }
   updateEnemies(dt){
     const p=this.player;
     for(const e of [...this.enemies]){
-      if(!this.enemies.includes(e)||e.y>p.y+8)continue;
+      if(!this.enemies.includes(e)||e.y>p.y+8||this.turnBased&&e.spawnedTurn===this.turnCount)continue;
+      const adjacent=dist(e,p)<=1,hitThisTurn=this.turnBased&&e.hitTurn===this.turnCount;let acted=false;
       advanceEnemyIntent(this,e,dt);if(!this.enemies.includes(e))continue;
       e.fallTimer=(e.fallTimer||0)+dt;
       const blocked=!enemyCanEnter(this,e,e.x,e.y+1);
@@ -316,14 +321,41 @@ export class Game{
       else if(blocked)e.fallTimer=0;
       if(!e.awake&&noticesPlayer(this,e)){e.awake=true;e.timer=Math.min(e.timer,.26);}
       if(e.awake)e.timer-=dt;
-      e.stun=Math.max(0,e.stun-dt);e.flash=Math.max(0,e.flash-dt);
+      e.stun=Math.max(0,e.stun-dt);if(!this.turnBased)e.flash=Math.max(0,e.flash-dt);
       e.rx+=(e.x-e.rx)*Math.min(1,dt*12);e.ry+=(e.y-e.ry)*Math.min(1,dt*12);
-      if(e.awake&&e.timer<=0&&e.stun<=0&&!e.intent&&dist(e,p)<13)this.enemyStep(e);
-      if(dist(e,p)<=1&&e.stun<=0)this.damage(e.type==='hunter'?22:e.type==='rusher'?14+this.stage:e.type==='moth'?5+this.stage:e.type==='swarm'?6+this.stage:11+this.stage*2,'遺跡の魔物に倒された');
+      if(e.awake&&e.timer<=0&&e.stun<=0&&!e.intent&&!hitThisTurn&&dist(e,p)<13){this.enemyStep(e);acted=true;}
+      if(dist(e,p)<=1&&e.stun<=0&&(!this.turnBased||adjacent&&acted&&!e.intent))this.damage(e.type==='hunter'?22:e.type==='rusher'?14+this.stage:e.type==='moth'?5+this.stage:e.type==='swarm'?6+this.stage:11+this.stage*2,'遺跡の魔物に倒された');
     }
   }
+  updateVisuals(dt){
+    dt=cap(dt,0,.04);
+    for(const p of this.particles){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.98;p.vy*=.98;}this.particles=this.particles.filter(p=>p.life>0);for(const f of this.texts){f.life-=dt;f.y-=dt*.55;}this.texts=this.texts.filter(f=>f.life>0);for(const f of this.fx)f.life-=dt;this.fx=this.fx.filter(f=>f.life>0);this.shake=Math.max(0,this.shake-dt);this.flash=Math.max(0,this.flash-dt);if(this.pulseFx){this.pulseFx.life-=dt;if(this.pulseFx.life<=0)this.pulseFx=null;}
+    if(this.turnBased){for(const e of this.enemies)e.flash=Math.max(0,e.flash-dt);if(this.boss)this.boss.flash=Math.max(0,this.boss.flash-dt);}
+  }
   step(dt,input={}){
-    dt=cap(dt,0,.04);this.time+=dt;for(const p of this.particles){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.98;p.vy*=.98;}this.particles=this.particles.filter(p=>p.life>0);for(const f of this.texts){f.life-=dt;f.y-=dt*.55;}this.texts=this.texts.filter(f=>f.life>0);for(const f of this.fx)f.life-=dt;this.fx=this.fx.filter(f=>f.life>0);this.shake=Math.max(0,this.shake-dt);this.flash=Math.max(0,this.flash-dt);if(this.pulseFx){this.pulseFx.life-=dt;if(this.pulseFx.life<=0)this.pulseFx=null;}
+    if(this.turnBased){this.updateVisuals(dt);return this.takeTurn(input);}
+    this.advanceWorld(cap(dt,0,.04),input);
+  }
+  takeTurn(input={}){
+    if(!this.turnBased||this.mode!=='play')return false;
+    if(Number.isInteger(input.element)&&input.element>=0&&input.element<4)this.player.element=input.element;
+    let action=null;const p=this.player;
+    if(input.heal){if(p.potions>0&&p.hp<this.maxHp)action={heal:true};}
+    else if(input.pulse||input.cast){if(p.pulseTimer<=TURN_TIME)action={pulse:true};else this.toast(`共鳴はあと${Math.ceil(p.pulseTimer)}ターン。「待つ」で時間を進める`);}
+    else if(input.dir&&DIRS[input.dir]){
+      const [dx,dy]=DIRS[input.dir],x=p.x+dx,y=p.y+dy,t=this.at(x,y);
+      const target=this.actorAt(x,y),supported=this.at(p.x,p.y+1)||this.occupied(p.x,p.y+1)||this.actorAt(p.x,p.y+1);
+      if(inside(x,y)&&(target||!this.occupied(x,y)&&(!t||t.c!==9))&&(input.dir!=='up'||target||t||supported&&p.jumpTimer<=TURN_TIME))action={dir:input.dir};
+      else this.toast('そこへは進めない。「待つ」で敵や落盤を1ターン進める');
+    }else if(input.wait||input.rush)action={wait:true};
+    if(!action)return false;
+    this.turnCount++;this.started=true;
+    this.advanceWorld(TURN_TIME,action);
+    p.rx=p.x;p.ry=p.y;for(const e of this.enemies){e.rx=e.x;e.ry=e.y;}
+    this.emit('save');return true;
+  }
+  advanceWorld(dt,input={}){
+    this.time+=dt;this.updateVisuals(Math.min(dt,.04));
     if(this.mode!=='play')return;const p=this.player;
     if(Number.isInteger(input.element)&&input.element>=0&&input.element<4)p.element=input.element;
     if(!this.started){
@@ -332,8 +364,8 @@ export class Game{
     }
     this.separateEnemies();this.ticks++;this.roomTime+=dt;this.messageTimer=Math.max(0,this.messageTimer-dt);this.comboTimer=Math.max(0,this.comboTimer-dt);for(const k of ['invuln','drillTimer','pulseTimer','castTimer','jumpTimer'])p[k]=Math.max(0,p[k]-dt);
     if(Number.isInteger(input.element)&&input.element>=0&&input.element<4)p.element=input.element;if(input.dir&&DIRS[input.dir])p.dir=input.dir;
-    if(input.heal)this.potion();if(input.pulse||input.cast)this.resonate();if((input.dir||input.rush)&&p.drillTimer<=0){this.tryStep(input.dir||p.dir);p.drillTimer=(input.rush?.105:.17)*this.drill.speed*Math.pow(.88,p.upgrades.quick||0);}
-    if(!this.at(p.x,p.y+1)&&!this.occupied(p.x,p.y+1)&&!this.actorAt(p.x,p.y+1)&&p.y<ROWS-2){p.fallTimer+=dt;if(p.fallTimer>.14){p.y++;p.fallTimer=0;}}else p.fallTimer=0;
+    const beforeY=p.y;if(input.heal)this.potion();if(input.pulse||input.cast)this.resonate();if((input.dir||input.rush)&&p.drillTimer<=0){this.tryStep(input.dir||p.dir);p.drillTimer=(input.rush?.105:.17)*this.drill.speed*Math.pow(.88,p.upgrades.quick||0);}
+    if(!this.at(p.x,p.y+1)&&!this.occupied(p.x,p.y+1)&&!this.actorAt(p.x,p.y+1)&&p.y<ROWS-2&&(!this.turnBased||p.y===beforeY)){p.fallTimer+=dt;if(p.fallTimer>.14){p.y++;p.fallTimer=0;}}else p.fallTimer=0;
     if(this.started){this.collapseSlow=Math.max(0,this.collapseSlow-dt);const gap=p.y-this.collapseFront,speed=(this.roomType==='escape'?1.05:.65)+Math.max(0,gap-19)*.65;this.collapseFront+=speed*dt*(this.collapseSlow>0?.2:1);if(this.boss?.engaged)this.collapseFront=Math.min(this.collapseFront,this.boss.y-8);if(this.collapseFront>=p.y-.5)this.damage(12,'迫る崩落に飲み込まれた');}
     p.rx+=(p.x-p.rx)*Math.min(1,dt*20);p.ry+=(p.y-p.ry)*Math.min(1,dt*20);if(this.mode!=='play')return;
     this.settleTimer-=dt;if(this.settleTimer<=0){this.scanFalls();this.settleTimer=.15;}this.updateFalls(dt);this.updateFluids(dt);if(this.mode!=='play')return;
@@ -341,11 +373,12 @@ export class Game{
     this.updateSwarms(dt);
     for(const h of this.hazards){h.delay-=dt;if(h.delay<=0&&!h.hit){h.hit=true;if(spitBlocked(this,h))continue;if(dist(h,p)<=h.radius)this.damage(h.damage,h.kind==='spore'?'毒胞子に倒された':'遺跡の術式に倒された');this.burst(h.x,h.y,h.kind==='spore'?'#bef7a6':'#ffba88',8);}}this.hazards=this.hazards.filter(h=>!h.blocked&&h.delay>-.3);
     this.updateEnemies(dt);
+    if(this.mode!=='play')return;
     updateBoss(this,dt);
     if(this.mode!=='play')return;this.checkObjective();if(this.mode==='play'&&this.ticks%180===0)this.emit('save');
   }
-  serialize(){const state={};for(const k of ['seed','stage','room','roomType','time','roomTime','ticks','player','stats','grid','falling','enemies','broods','swarmWave','enemyVersion','nestVersion','swarmTimer','swarmBudget','hazards','fluids','sources','fixtures','goal','exit','entrance','boss','pendingLevels','choice','loot','pendingLoot','postCheckpointMode','shopStock','routeOptions','started','hunterSpawned','visited','collapseFront','collapseSlow','postUpgradeMode','encounterVersion','mode'])state[k]=this[k];state.rngState=this.rng.state();if(state.mode==='pause')state.mode='play';return {version:3,state};}
+  serialize(){const state={};for(const k of ['seed','clockMode','turnCount','stage','room','roomType','settleTimer','fluidTimer','combo','comboTimer','time','roomTime','ticks','player','stats','grid','falling','enemies','broods','swarmWave','enemyVersion','nestVersion','swarmTimer','swarmBudget','hazards','fluids','sources','fixtures','goal','exit','entrance','boss','pendingLevels','choice','loot','pendingLoot','postCheckpointMode','shopStock','routeOptions','started','hunterSpawned','visited','collapseFront','collapseSlow','postUpgradeMode','encounterVersion','mode'])state[k]=this[k];state.rngState=this.rng.state();if(state.mode==='pause')state.mode='play';return {version:3,state};}
   static restore(data,meta){const s=data?.state;if(data?.version===2&&s){if(!Number.isInteger(s.stage)||s.stage<0||s.stage>5||!Number.isInteger(s.room)||s.room<0||s.room>2||!s.player||!Number.isFinite(s.player.hp)||s.player.hp<=0||!Array.isArray(s.player.charges)||s.player.charges.length!==4)throw Error('Invalid legacy save');const g=new Game(s.seed,meta);g.stage=s.stage;g.room=s.room;g.player={...g.player,...structuredClone(s.player),fallTimer:0,jumpTimer:0,maxY:2};g.stats={...g.stats,...s.stats};g.pendingLevels=Math.min(1,s.pendingLevels||0);const legacyLoot=s.pendingLoot||s.loot;if(legacyLoot&&['drills','suits'].includes(legacyLoot.slot)&&EQUIPMENT[legacyLoot.slot].some(i=>i.id===legacyLoot.item?.id))g.pendingLoot=structuredClone(legacyLoot);g.loadFloor(ROOM_TYPES[s.roomType]?s.roomType:'runes');g.toast('探索記録を引き継いで地層の入口から再開');return g;}
     if(data?.version!==3||!s)throw Error('Invalid save');if(!Number.isInteger(s.stage)||s.stage<0||s.stage>5||!Number.isInteger(s.room)||s.room<0||s.room>2||!ROOM_TYPES[s.roomType])throw Error('Invalid room');if(!Array.isArray(s.grid)||s.grid.length!==ROWS||s.grid.some(r=>!Array.isArray(r)||r.length!==COLS||r.some(t=>t!==null&&(!t||!Number.isInteger(t.c)||t.c<0||t.c>12))))throw Error('Invalid map');const p=s.player;if(!p||!Number.isInteger(p.element)||p.element<0||p.element>3||!Number.isFinite(p.chargeMax)||p.chargeMax<=0||!Number.isInteger(p.x)||!Number.isInteger(p.y)||!inside(p.x,p.y)||!Number.isFinite(p.hp)||p.hp<=0||!Array.isArray(p.charges)||p.charges.length!==4||p.charges.some(n=>!Number.isFinite(n)||n<0))throw Error('Invalid player');if(!['play','level','loot','camp','route'].includes(s.mode)||!s.goal||!s.exit||!Array.isArray(s.fixtures)||!Array.isArray(s.hazards)||!Array.isArray(s.fluids))throw Error('Invalid state');
-    const g=new Game(s.seed,meta);for(const [k,v]of Object.entries(s))if(Object.hasOwn(g,k))g[k]=v;g.rng.restore(s.rngState);if(s.encounterVersion!==2){g.broods=[];g.swarmTimer=.5;g.swarmBudget=12+g.stage*2;g.encounterVersion=2;if(s.mode==='play'){g.grid=structuredClone(g.grid);g.enemies=structuredClone(g.enemies);g.populateEnemies(Math.max(p.y,p.maxY||p.y)+5);}}if(!(s.enemyVersion>=1)){g.enemyVersion=2;g.swarmWave=0;g.enemies=structuredClone(g.enemies);const rand=random(g.seed+g.roomNumber*15485863);let i=0;for(const e of [...g.enemies].sort((a,b)=>a.y-b.y)){if(e.y<=Math.max(p.y,p.maxY||p.y)+5||e.hp!==e.maxHp||!['swarm','slime','armored'].includes(e.type))continue;if(i++%6===0)Object.assign(e,g.makeEnemy(e.x,e.y,SPECIAL_ENEMIES[(Math.floor((i-1)/6)+g.stage+g.room)%SPECIAL_ENEMIES.length],rand));}}if(s.enemyVersion!==2){const keep=new Set(g.enemies.filter(e=>e.type==='moth').sort((a,b)=>dist(a,p)-dist(b,p)).slice(0,2));g.enemies=g.enemies.filter(e=>e.type!=='moth'||keep.has(e));g.broods=[];g.swarmTimer=Math.max(3.5,g.swarmTimer||0);g.swarmBudget=Math.min(g.swarmBudget,12+g.stage*2);g.enemyVersion=2;}g.events=[];g.particles=[];g.texts=[];g.fx=[];g.player.rx=p.x;g.player.ry=p.y;g.player.invuln=1.5;if(s.nestVersion!==1){g.grid=structuredClone(g.grid);g.enemies=structuredClone(g.enemies);if(s.mode==='play')g.supportUnexploredNests();else g.nestVersion=1;}prepareBoss(g.boss);g.separateEnemies();return g;}
+    const g=new Game(s.seed,meta);for(const [k,v]of Object.entries(s))if(Object.hasOwn(g,k))g[k]=v;g.rng.restore(s.rngState);if(s.encounterVersion!==2){g.broods=[];g.swarmTimer=.5;g.swarmBudget=12+g.stage*2;g.encounterVersion=2;if(s.mode==='play'){g.grid=structuredClone(g.grid);g.enemies=structuredClone(g.enemies);g.populateEnemies(Math.max(p.y,p.maxY||p.y)+5);}}if(!(s.enemyVersion>=1)){g.enemyVersion=2;g.swarmWave=0;g.enemies=structuredClone(g.enemies);const rand=random(g.seed+g.roomNumber*15485863);let i=0;for(const e of [...g.enemies].sort((a,b)=>a.y-b.y)){if(e.y<=Math.max(p.y,p.maxY||p.y)+5||e.hp!==e.maxHp||!['swarm','slime','armored'].includes(e.type))continue;if(i++%6===0)Object.assign(e,g.makeEnemy(e.x,e.y,SPECIAL_ENEMIES[(Math.floor((i-1)/6)+g.stage+g.room)%SPECIAL_ENEMIES.length],rand));}}if(s.enemyVersion!==2){const keep=new Set(g.enemies.filter(e=>e.type==='moth').sort((a,b)=>dist(a,p)-dist(b,p)).slice(0,2));g.enemies=g.enemies.filter(e=>e.type!=='moth'||keep.has(e));g.broods=[];g.swarmTimer=Math.max(3.5,g.swarmTimer||0);g.swarmBudget=Math.min(g.swarmBudget,12+g.stage*2);g.enemyVersion=2;}g.events=[];g.particles=[];g.texts=[];g.fx=[];g.player.rx=p.x;g.player.ry=p.y;g.clockMode=s.clockMode==='turn'?'turn':'realtime';g.turnCount=Number.isSafeInteger(s.turnCount)&&s.turnCount>=0?s.turnCount:0;g.player.invuln=g.turnBased?p.invuln:1.5;if(s.nestVersion!==1){g.grid=structuredClone(g.grid);g.enemies=structuredClone(g.enemies);if(s.mode==='play')g.supportUnexploredNests();else g.nestVersion=1;}prepareBoss(g.boss);g.separateEnemies();return g;}
 }

@@ -9,7 +9,7 @@ export class Renderer{
   constructor(ctx){this.c=ctx;this.w=400;this.h=500;this.cam=0;this.clock=0;this.lastStage=-1;}
   resize(w,h){this.w=w;this.h=h;this.cell=Math.min(w/(COLS+.8),h/12.5);this.left=(w-COLS*this.cell)/2;}
   draw(g,dt=1/60,home=false){
-    const c=this.c,w=this.w,h=this.h,s=this.cell;this.clock+=dt;const visible=h/s,target=visible>=ROWS?-(visible-ROWS)/2:clamp(g.player.ry-visible*.48,0,ROWS-visible);
+    const c=this.c,w=this.w,h=this.h,s=this.cell;if(g.turnBased&&!home)this.clock=g.time;else this.clock+=dt;const visible=h/s,target=visible>=ROWS?-(visible-ROWS)/2:clamp(g.player.ry-visible*.48,0,ROWS-visible);
     if(this.lastStage!==g.roomNumber){this.cam=target;this.lastStage=g.roomNumber;}this.cam+=(target-this.cam)*Math.min(1,dt*9);
     c.fillStyle='#080f16';c.fillRect(0,0,w,h);c.save();if(g.shake)c.translate(Math.sin(this.clock*111)*g.shake*8,Math.cos(this.clock*131)*g.shake*7);c.save();c.translate(this.left,-this.cam*s);
     this.floor(g);const start=Math.max(0,Math.floor(this.cam)-1),end=Math.min(ROWS,Math.ceil(this.cam+visible)+1);
@@ -39,7 +39,7 @@ export class Renderer{
     const shade=c.createLinearGradient(0,0,0,h);shade.addColorStop(0,'#050b132c');shade.addColorStop(.15,'#050b1300');shade.addColorStop(.85,'#050b1300');shade.addColorStop(1,'#050b1355');c.fillStyle=shade;c.fillRect(0,0,w,h);
     if(g.flash){c.fillStyle=`rgba(255,115,118,${g.flash*.8})`;c.fillRect(0,0,w,h);}
     if(g.messageTimer>0&&!home){const text=g.message,fontsize=Math.min(11,w*.028);c.font=`600 ${fontsize}px sans-serif`;c.textAlign='center';const width=Math.min(w-20,c.measureText(text).width+24);rr(c,(w-width)/2,8,width,28,12,'#13242ae8','#bdd2ac38');c.fillStyle='#e1e8cc';c.fillText(text,w/2,26,w-36);}
-    if(!g.started&&!home){rr(c,w/2-119,h-44,238,28,14,'#122329e8','#c3dcc62a');c.fillStyle='#c3d9cf';c.font='600 10px sans-serif';c.textAlign='center';c.fillText('▼ 下へ掘る / 掘る長押しで高速 / 上は小ジャンプ',w/2,h-26);}
+    if(!g.started&&!home){rr(c,w/2-119,h-44,238,28,14,'#122329e8','#c3dcc62a');c.fillStyle='#c3d9cf';c.font='600 10px sans-serif';c.textAlign='center';c.fillText(g.turnBased?'方向タップで1手 / 待つで周囲を進める':'▼ 下へ掘る / 掘る長押しで高速 / 上は小ジャンプ',w/2,h-26);}
     c.restore();
   }
   floor(g){const c=this.c,s=this.cell;c.fillStyle=g.biome.bg;c.fillRect(0,0,COLS*s,ROWS*s);

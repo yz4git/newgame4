@@ -11,7 +11,7 @@
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./icon.png">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./style.css?v=2.4.0">
+  <link rel="stylesheet" href="./style.css?v=2.5.0">
 </head>
 <body>
   <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
@@ -21,6 +21,7 @@
     <symbol id="i-gem" viewBox="0 0 24 24"><path d="m12 2 8 7-2 9-6 4-7-5-1-8zM4 9l8 4 8-4m-8 4V2m0 11v9"/></symbol>
     <symbol id="i-pulse" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4M5 5l3 3m8 8 3 3M5 19l3-3m8-8 3-3"/></symbol>
     <symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 2 9 4v6c0 5-9 10-9 10S3 17 3 12V6z"/><path d="m8 12 3 3 5-6"/></symbol>
+    <symbol id="i-wait" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></symbol>
     <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
     <symbol id="i-sound" viewBox="0 0 24 24"><path d="M11 4 5 9H2v6h3l6 5zM16 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></symbol>
     <symbol id="i-up" viewBox="0 0 24 24"><path d="m5 15 7-7 7 7"/></symbol>
@@ -37,21 +38,21 @@
     </aside>
     <main class="play-shell" id="game-shell">
       <header class="hud">
-        <div class="topline"><div class="brand"><svg><use href="#i-gem"/></svg><span>RELIC <b>DELVE</b></span><i>v2.4.0</i></div><div class="header-actions"><button id="sound" class="icon-button" aria-label="サウンドを切り替える" aria-pressed="true"><svg><use href="#i-sound"/></svg></button><button id="pause" class="icon-button" aria-label="一時停止"><svg><use href="#i-pause"/></svg></button></div></div>
+        <div class="topline"><div class="brand"><svg><use href="#i-gem"/></svg><span>RELIC <b>DELVE</b></span><i>v2.5.0</i></div><div class="header-actions"><button id="sound" class="icon-button" aria-label="サウンドを切り替える" aria-pressed="true"><svg><use href="#i-sound"/></svg></button><button id="pause" class="icon-button" aria-label="一時停止"><svg><use href="#i-pause"/></svg></button></div></div>
         <div class="mission"><span id="biome-name">翠晶の忘却庭園</span><div><span class="depth-label">DEPTH</span> <strong id="depth">0</strong><span class="unit">m</span><span id="floor-badge">1 / 18</span></div></div>
         <div class="meters"><div class="meter hp"><div class="meter-icon"><svg><use href="#i-heart"/></svg></div><div class="meter-track"><div id="hp-fill" class="meter-fill"></div><span id="hp-text">100 / 100</span></div></div><div class="meter quest"><div class="meter-icon">◇</div><div class="meter-track"><div id="goal-fill" class="meter-fill"></div><span id="goal-count">地層の深さ 0%</span></div></div></div>
         <div id="objective-text" class="objective-text">連鎖をつないで地底ゲートへ</div>
         <div class="runline"><span class="level">LV <b id="level">1</b><i><i id="xp-fill"></i></i></span><span class="gold"><svg><use href="#i-gem"/></svg><b id="gold">0</b> G</span><span class="guard"><svg><use href="#i-shield"/></svg><b id="shield">1</b></span><span id="drill-name">遺跡ブレイカー</span></div>
 <div class="elements" id="elements" aria-label="属性術式の選択"><button id="element-0" data-element="0" class="element-button " style="--element-color:#75dba7" aria-label="翠命を選択" aria-pressed="false"><span>✚</span><small>翠命</small><b>10</b><em><i></i></em></button><button id="element-1" data-element="1" class="element-button selected" style="--element-color:#f3ad70" aria-label="熾火を選択" aria-pressed="true"><span>✦</span><small>熾火</small><b>10</b><em><i></i></em></button><button id="element-2" data-element="2" class="element-button " style="--element-color:#7ac9f1" aria-label="霜晶を選択" aria-pressed="false"><span>❄</span><small>霜晶</small><b>10</b><em><i></i></em></button><button id="element-3" data-element="3" class="element-button " style="--element-color:#b5a0f3" aria-label="紫電を選択" aria-pressed="false"><span>ϟ</span><small>紫電</small><b>10</b><em><i></i></em></button></div>
       </header>
-      <section class="viewport" id="viewport" aria-label="地下遺跡のゲーム画面"><canvas id="game" aria-label="下へ掘ると重力で落ちます。支えを失った塊は揺れてから落下。着地で同色がつながると連鎖します。"></canvas><div class="boss-hud" id="boss-hud" hidden><div><span id="boss-name"></span><b id="boss-percent"></b></div><i><i id="boss-fill"></i></i></div><span class="corner-mark">RUIN EXPLORATION <b>02</b></span><span class="corner-version">READ THE FALL · CHAIN THE VEIN</span></section>
-      <footer class="controls" id="controls"><div class="dpad" id="dpad" aria-label="移動と掘削"><button class="dir up" data-dir="up" aria-label="上へ掘る"><svg><use href="#i-up"/></svg></button><button class="dir left" data-dir="left" aria-label="左へ掘る"><svg><use href="#i-up"/></svg></button><span class="pad-center"><svg><use href="#i-drill"/></svg></span><button class="dir right" data-dir="right" aria-label="右へ掘る"><svg><use href="#i-up"/></svg></button><button class="dir down" data-dir="down" aria-label="下へ掘る"><svg><use href="#i-up"/></svg></button></div><div class="control-hint">移動・掘削<br><span>長押しで連続</span></div><div class="action-pad"><button id="heal" class="heal-button" aria-label="回復薬を使う"><span>✚</span><b id="potions">2</b><small>回復</small></button><button id="pulse" class="pulse-button" aria-label="選択した属性の共鳴を使う"><svg><use href="#i-pulse"/></svg><span id="pulse-text">パルス</span><i id="pulse-cooldown"></i></button><button id="rush" class="rush-button" aria-label="高速掘削 長押し"><svg><use href="#i-drill"/></svg><strong id="cast-name">掘る</strong><small id="cast-cost">長押しで高速</small></button></div></footer>
+      <section class="viewport" id="viewport" aria-label="地下遺跡のゲーム画面"><canvas id="game" aria-label="下へ掘ると重力で落ちます。支えを失った塊は揺れてから落下。着地で同色がつながると連鎖します。"></canvas><div class="boss-hud" id="boss-hud" hidden><div><span id="boss-name"></span><b id="boss-percent"></b></div><i><i id="boss-fill"></i></i></div><span id="clock-status" class="clock-status" hidden></span><span class="corner-mark">RUIN EXPLORATION <b>02</b></span><span class="corner-version">READ THE FALL · CHAIN THE VEIN</span></section>
+      <footer class="controls" id="controls"><div class="dpad" id="dpad" aria-label="移動と掘削"><button class="dir up" data-dir="up" aria-label="上へ掘る"><svg><use href="#i-up"/></svg></button><button class="dir left" data-dir="left" aria-label="左へ掘る"><svg><use href="#i-up"/></svg></button><span class="pad-center"><svg><use href="#i-drill"/></svg></span><button class="dir right" data-dir="right" aria-label="右へ掘る"><svg><use href="#i-up"/></svg></button><button class="dir down" data-dir="down" aria-label="下へ掘る"><svg><use href="#i-up"/></svg></button></div><div class="control-hint">移動・掘削<br><span>長押しで連続</span></div><div class="action-pad"><button id="heal" class="heal-button" aria-label="回復薬を使う"><span>✚</span><b id="potions">2</b><small>回復</small></button><button id="pulse" class="pulse-button" aria-label="選択した属性の共鳴を使う"><svg><use href="#i-pulse"/></svg><span id="pulse-text">パルス</span><i id="pulse-cooldown"></i></button><button id="rush" class="rush-button" aria-label="高速掘削 長押し"><svg><use id="rush-icon" href="#i-drill"/></svg><strong id="cast-name">掘る</strong><small id="cast-cost">長押しで高速</small></button></div></footer>
       <div id="overlay" class="overlay scrollable"></div>
       <div id="status" role="status" class="sr-only" aria-live="polite"></div>
     </main>
     <aside class="field-panel right-panel"><div class="field-kicker">FIELD NOTES</div><h3>遺跡の心得</h3><ol><li><b>足場を崩して潜る</b><p>同色の鉱脈をまとめて砕く。左右で次の連鎖へ進路をつなぐ。</p></li><li><b>着地が次の連鎖に</b><p>支えを失った塊が落下。同色がつながれば追加の連鎖になる。</p></li><li><b>共鳴で掘り方を変える</b><p>落盤凍結、前方爆破、回復、連鎖雷。集めた鉱脈が切り札になる。</p></li></ol><div class="key-notes"><span>方向キー / WASD</span> 移動・掘削<br><span>SPACE</span> 高速掘削　<span>1–4</span> 属性選択<br><span>X</span> 共鳴　<span>C</span> 回復<br><span>ESC</span> 一時停止</div><button id="guide-side" class="text-button"><svg><use href="#i-book"/></svg>フィールドガイド</button></aside>
   </div>
   <noscript>このゲームを遊ぶにはJavaScriptを有効にしてください。</noscript>
-  <script type="module" src="./src/app.mjs?v=2.4.0"></script>
+  <script type="module" src="./src/app.mjs?v=2.5.0"></script>
 </body>
 </html>

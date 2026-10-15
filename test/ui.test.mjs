@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 
-test('game shell boots, accepts independent movement/drilling pointers, switches element and saves on pause',async()=>{
+test('game shell supports realtime controls, turn selection, quick taps, held waits, pauses and continuation',async()=>{
   const html=await readFile(new URL('../index.html',import.meta.url),'utf8'),nodes=new Map(),windowEvents=new Map(),documentEvents=new Map(),storage=new Map(),frames=[];
   class Node{
     constructor(id='',dataset={}){this.id=id;this.dataset=dataset;this.listeners=new Map();this.classes=new Set();this.children=new Map();this.disabled=false;this.style={setProperty(k,v){this[k]=v;}};this.classList={add:(x)=>this.classes.add(x),remove:(x)=>this.classes.delete(x),toggle:(x,on)=>{if(on??!this.classes.has(x))this.classes.add(x);else this.classes.delete(x);},contains:x=>this.classes.has(x)};}
@@ -29,4 +29,28 @@ test('game shell boots, accepts independent movement/drilling pointers, switches
   nodes.get('rush').fire('pointercancel',{pointerId:2});nodes.get('dpad').fire('pointerup',{pointerId:1});assert.ok(!nodes.get('rush').classList.contains('held'));assert.ok(dirs.every(n=>!n.classList.contains('held')));
   windowEvents.get('blur')();const save=JSON.parse(storage.get('drill-delve-run-v3'));assert.equal(save.version,3);assert.equal(save.state.player.element,2);assert.ok(save.state.stats.casts>0);assert.equal(save.state.player.charges.length,4);assert.equal(save.state.mode,'play');assert.match(nodes.get('overlay').innerHTML,/ひとやすみ/);
   nodes.get('overlay').fire('click',{target:new Node('',{action:'guide'})});assert.match(nodes.get('overlay').innerHTML,/着地で連鎖/);nodes.get('overlay').fire('click',{target:new Node('',{action:'guide-back'})});assert.match(nodes.get('overlay').innerHTML,/ひとやすみ/);
+  nodes.get('overlay').fire('click',{target:new Node('',{clock:'turn'})});
+  const state=()=>JSON.parse(storage.get('drill-delve-run-v3')).state;
+  assert.equal(state().clockMode,'turn');assert.equal(state().turnCount,0);assert.equal(nodes.get('cast-name').textContent,'待つ');
+  let stamp=1600;Object.defineProperty(performance,'now',{value:()=>stamp,configurable:true});
+  const tick=(n=1,spacing=1000/60)=>{for(let i=0;i<n;i++){stamp+=spacing;frames.shift()(stamp);}};
+  nodes.get('overlay').fire('click',{target:new Node('',{action:'resume'})});const stopped=state().time;tick(1,60000);tick(60);assert.equal(state().time,stopped);assert.equal(state().turnCount,0);
+  // A complete touch between animation frames is still exactly one action.
+  nodes.get('dpad').fire('pointerdown',{pointerId:4,clientX:60,clientY:110,target:dirs.find(n=>n.dataset.dir==='down')});nodes.get('dpad').fire('pointerup',{pointerId:4});tick(30);
+  assert.equal(state().turnCount,1);assert.equal(state().time,stopped+1);assert.match(nodes.get('clock-status').textContent,/TURN 1/);
+  tick(1,60000);tick(30);assert.equal(state().turnCount,1);assert.equal(state().time,stopped+1);
+  nodes.get('pulse').fire('click');tick(30);assert.equal(state().turnCount,1); // The previous real-time cooldown is retained.
+  while(state().player.pulseTimer>1){nodes.get('rush').fire('pointerdown',{pointerId:8});nodes.get('rush').fire('pointerup',{pointerId:8});tick(30);}
+  let turns=state().turnCount;
+  nodes.get('elements').fire('click',{target:new Node('',{element:'0'})});nodes.get('pulse').fire('click');tick(30);assert.equal(state().turnCount,++turns);assert.match(nodes.get('pulse-text').textContent,/T$/);
+  nodes.get('pulse').fire('click');tick(30);assert.equal(state().turnCount,turns);
+  nodes.get('rush').fire('pointerdown',{pointerId:5});nodes.get('rush').fire('pointercancel',{pointerId:5});tick(30);assert.equal(state().turnCount,turns);
+  const shownTurn=()=>Number(nodes.get('clock-status').textContent.match(/TURN ([\d,]+)/)[1].replaceAll(',',''));
+  nodes.get('rush').fire('pointerdown',{pointerId:6});tick(1);assert.equal(shownTurn(),++turns);tick(24);assert.equal(shownTurn(),turns);tick(4);assert.equal(shownTurn(),++turns);nodes.get('rush').fire('pointerup',{pointerId:6});tick(60);assert.equal(state().turnCount,turns);
+  windowEvents.get('keydown')({code:'Space',preventDefault(){}});windowEvents.get('keyup')({code:'Space'});tick(30);assert.equal(state().turnCount,++turns);
+  // Pausing clears commands that have not reached a frame yet, and continuation stays frozen.
+  nodes.get('rush').fire('pointerdown',{pointerId:7});nodes.get('pause').fire('click');tick(30);assert.equal(state().turnCount,turns);nodes.get('overlay').fire('click',{target:new Node('',{action:'home'})});nodes.get('overlay').fire('click',{target:new Node('',{action:'continue'})});tick(1,60000);assert.equal(state().turnCount,turns);assert.equal(nodes.get('cast-name').textContent,'待つ');
+  // New expeditions use the title selection; existing records retain their own clock.
+  nodes.get('pause').fire('click');nodes.get('overlay').fire('click',{target:new Node('',{clock:'realtime'})});assert.equal(state().clockMode,'realtime');const beforeRealtime=state().time;nodes.get('overlay').fire('click',{target:new Node('',{action:'resume'})});tick(60);nodes.get('pause').fire('click');assert.ok(state().time>beforeRealtime);
+  nodes.get('overlay').fire('click',{target:new Node('',{action:'home'})});nodes.get('overlay').fire('click',{target:new Node('',{clock:'turn'})});assert.match(nodes.get('overlay').innerHTML,/data-clock="turn" aria-pressed="true"/);nodes.get('overlay').fire('click',{target:new Node('',{action:'new'})});assert.equal(state().clockMode,'turn');assert.equal(state().turnCount,0);
 });
