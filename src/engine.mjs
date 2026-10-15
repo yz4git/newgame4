@@ -1,5 +1,5 @@
 import {ENEMY_TYPES,SPECIAL_ENEMIES,specialEnemyStep,advanceEnemyIntent,specialEnemyDeath,spitBlocked} from './enemies.mjs';
-export const VERSION='2.3.0';
+export const VERSION='2.3.1';
 export const COLS=13, ROWS=76;
 export const PALETTE=['#75dba7','#f3ad70','#7ac9f1','#b5a0f3'];
 export const ELEMENTS=[
@@ -86,7 +86,7 @@ export class Game{
   loadFloor(forcedType){
     const rand=random(this.seed+this.roomNumber*7919);this.roomType=this.room===2&&this.stage%2===1?'boss':forcedType||'runes';
     this.grid=Array.from({length:ROWS},(_,y)=>Array.from({length:COLS},(_,x)=>!inside(x,y)?{c:9,hp:999}:null));
-    this.falling=[];this.enemies=[];this.broods=[];this.swarmWave=0;this.enemyVersion=1;this.swarmTimer=.65;this.swarmBudget=40+this.stage*4;this.hazards=[];this.fluids=[];this.sources=[];this.fixtures=[];this.fx=[];this.visited=[];this.boss=null;this.shopStock=[];this.hunterSpawned=false;this.roomTime=0;this.started=false;this.settleTimer=.18;this.fluidTimer=.4;this.collapseFront=-10;this.collapseSlow=0;
+    this.falling=[];this.enemies=[];this.broods=[];this.swarmWave=0;this.enemyVersion=2;this.swarmTimer=3.5;this.swarmBudget=12+this.stage*2;this.hazards=[];this.fluids=[];this.sources=[];this.fixtures=[];this.fx=[];this.visited=[];this.boss=null;this.shopStock=[];this.hunterSpawned=false;this.roomTime=0;this.started=false;this.settleTimer=.18;this.fluidTimer=.4;this.collapseFront=-10;this.collapseSlow=0;
     const coarse=Array.from({length:Math.ceil(ROWS/2)},()=>Array.from({length:Math.ceil(COLS/2)},()=>Math.floor(rand()*4)));
     for(let y=5;y<ROWS-7;y++)for(let x=1;x<COLS-1;x++){
       let c=coarse[Math.floor(y/2)][Math.floor(x/2)];if(rand()<.13)c=Math.floor(rand()*4);
@@ -139,14 +139,14 @@ export class Game{
       if(danger&&b.delay>-.7)continue;
       this.broods.splice(i,1);
       if(danger||dist(b,p)>10||b.y<this.collapseFront+1||this.isFixture(b.x,b.y)||tile&&![0,1,2,3,10,11].includes(tile.c)||this.enemies.some(e=>e.x===b.x&&e.y===b.y)||this.boss&&Math.abs(b.x-this.boss.x)<=1&&Math.abs(b.y-this.boss.y)<=1)continue;
-      if(this.enemies.filter(near).length>=14)continue;
+      if(this.enemies.filter(near).length>=10||!ENEMY_TYPES[b.type]&&this.enemies.filter(e=>e.type==='moth').length>=2)continue;
       this.carve(b.x,b.y);const e=this.makeEnemy(b.x,b.y,ENEMY_TYPES[b.type]?b.type:'moth');e.stun=.55;this.enemies.push(e);this.swarmBudget--;this.stats.reinforcements=(this.stats.reinforcements||0)+1;this.burst(b.x,b.y,'#ffc196',5);
     }
     this.swarmTimer-=dt;
     if(this.swarmTimer>0||this.swarmBudget<=this.broods.length)return;
-    this.swarmTimer=1.35;
+    this.swarmTimer=5.5;
     const nearby=this.enemies.filter(near).length+this.broods.filter(near).length;
-    if(nearby>=9)return;
+    if(nearby>=7)return;
     // Search the open shaft and its bordering stone, so reinforcements appear beside
     // the current mining route instead of being stranded in a distant side pocket.
     const queue=[{x:p.x,y:p.y}],seen=new Set([`${p.x},${p.y}`]),candidates=[];
@@ -159,8 +159,9 @@ export class Game{
       candidates.push({x,y,score:Math.abs(y-p.y-2)*2+Math.abs(d-4)+this.rng()});
     }
     candidates.sort((a,b)=>a.score-b.score);
-    const count=Math.min(6,10-nearby,this.swarmBudget-this.broods.length);
-    const wave=this.swarmWave++;for(const [i,b]of candidates.slice(0,count).entries())this.broods.push({x:b.x,y:b.y,type:i===0?SPECIAL_ENEMIES[(wave+this.stage+this.room)%SPECIAL_ENEMIES.length]:'moth',delay:.6,max:.6});
+    const count=Math.min(3,8-nearby,this.swarmBudget-this.broods.length);
+    const wave=this.swarmWave++,moths=this.enemies.filter(e=>e.type==='moth').length+this.broods.filter(b=>!ENEMY_TYPES[b.type]).length;
+    for(const [i,b]of candidates.slice(0,count).entries())this.broods.push({x:b.x,y:b.y,type:i===1&&wave%2===0&&moths<2?'moth':SPECIAL_ENEMIES[(wave+this.stage+this.room+i*2)%SPECIAL_ENEMIES.length],delay:.6,max:.6});
   }
   component(x,y){const t=this.at(x,y);if(!t)return [];if(t.c>3)return [{x,y}];const seen=new Set([`${x},${y}`]),q=[{x,y}];for(let i=0;i<q.length;i++)for(const [dx,dy]of Object.values(DIRS)){const nx=q[i].x+dx,ny=q[i].y+dy,k=`${nx},${ny}`;if(inside(nx,ny)&&!seen.has(k)&&this.grid[ny][nx]?.c===t.c){seen.add(k);q.push({x:nx,y:ny});}}return q;}
   burst(x,y,color,n=9){for(let i=0;i<Math.min(n,30);i++){const a=this.rng()*Math.PI*2,s=.4+this.rng()*3;this.particles.push({x:x+.5,y:y+.5,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:.3+this.rng()*.4,size:.04+this.rng()*.12,color});}if(this.particles.length>300)this.particles.splice(0,this.particles.length-300);}
@@ -286,5 +287,5 @@ export class Game{
   serialize(){const state={};for(const k of ['seed','stage','room','roomType','time','roomTime','ticks','player','stats','grid','falling','enemies','broods','swarmWave','enemyVersion','swarmTimer','swarmBudget','hazards','fluids','sources','fixtures','goal','exit','entrance','boss','pendingLevels','choice','loot','pendingLoot','postCheckpointMode','shopStock','routeOptions','started','hunterSpawned','visited','collapseFront','collapseSlow','postUpgradeMode','encounterVersion','mode'])state[k]=this[k];state.rngState=this.rng.state();if(state.mode==='pause')state.mode='play';return {version:3,state};}
   static restore(data,meta){const s=data?.state;if(data?.version===2&&s){if(!Number.isInteger(s.stage)||s.stage<0||s.stage>5||!Number.isInteger(s.room)||s.room<0||s.room>2||!s.player||!Number.isFinite(s.player.hp)||s.player.hp<=0||!Array.isArray(s.player.charges)||s.player.charges.length!==4)throw Error('Invalid legacy save');const g=new Game(s.seed,meta);g.stage=s.stage;g.room=s.room;g.player={...g.player,...structuredClone(s.player),fallTimer:0,jumpTimer:0,maxY:2};g.stats={...g.stats,...s.stats};g.pendingLevels=Math.min(1,s.pendingLevels||0);const legacyLoot=s.pendingLoot||s.loot;if(legacyLoot&&['drills','suits'].includes(legacyLoot.slot)&&EQUIPMENT[legacyLoot.slot].some(i=>i.id===legacyLoot.item?.id))g.pendingLoot=structuredClone(legacyLoot);g.loadFloor(ROOM_TYPES[s.roomType]?s.roomType:'runes');g.toast('探索記録を引き継いで地層の入口から再開');return g;}
     if(data?.version!==3||!s)throw Error('Invalid save');if(!Number.isInteger(s.stage)||s.stage<0||s.stage>5||!Number.isInteger(s.room)||s.room<0||s.room>2||!ROOM_TYPES[s.roomType])throw Error('Invalid room');if(!Array.isArray(s.grid)||s.grid.length!==ROWS||s.grid.some(r=>!Array.isArray(r)||r.length!==COLS||r.some(t=>t!==null&&(!t||!Number.isInteger(t.c)||t.c<0||t.c>12))))throw Error('Invalid map');const p=s.player;if(!p||!Number.isInteger(p.element)||p.element<0||p.element>3||!Number.isFinite(p.chargeMax)||p.chargeMax<=0||!Number.isInteger(p.x)||!Number.isInteger(p.y)||!inside(p.x,p.y)||!Number.isFinite(p.hp)||p.hp<=0||!Array.isArray(p.charges)||p.charges.length!==4||p.charges.some(n=>!Number.isFinite(n)||n<0))throw Error('Invalid player');if(!['play','level','loot','camp','route'].includes(s.mode)||!s.goal||!s.exit||!Array.isArray(s.fixtures)||!Array.isArray(s.hazards)||!Array.isArray(s.fluids))throw Error('Invalid state');
-    const g=new Game(s.seed,meta);for(const [k,v]of Object.entries(s))if(Object.hasOwn(g,k))g[k]=v;g.rng.restore(s.rngState);if(s.encounterVersion!==2){g.broods=[];g.swarmTimer=.5;g.swarmBudget=40+g.stage*4;g.encounterVersion=2;if(s.mode==='play'){g.grid=structuredClone(g.grid);g.enemies=structuredClone(g.enemies);g.populateEnemies(Math.max(p.y,p.maxY||p.y)+5);}}if(s.enemyVersion!==1){g.enemyVersion=1;g.swarmWave=0;g.enemies=structuredClone(g.enemies);const rand=random(g.seed+g.roomNumber*15485863);let i=0;for(const e of [...g.enemies].sort((a,b)=>a.y-b.y)){if(e.y<=Math.max(p.y,p.maxY||p.y)+5||e.hp!==e.maxHp||!['swarm','slime','armored'].includes(e.type))continue;if(i++%6===0)Object.assign(e,g.makeEnemy(e.x,e.y,SPECIAL_ENEMIES[(Math.floor((i-1)/6)+g.stage+g.room)%SPECIAL_ENEMIES.length],rand));}}g.events=[];g.particles=[];g.texts=[];g.fx=[];g.player.rx=p.x;g.player.ry=p.y;g.player.invuln=1.5;return g;}
+    const g=new Game(s.seed,meta);for(const [k,v]of Object.entries(s))if(Object.hasOwn(g,k))g[k]=v;g.rng.restore(s.rngState);if(s.encounterVersion!==2){g.broods=[];g.swarmTimer=.5;g.swarmBudget=12+g.stage*2;g.encounterVersion=2;if(s.mode==='play'){g.grid=structuredClone(g.grid);g.enemies=structuredClone(g.enemies);g.populateEnemies(Math.max(p.y,p.maxY||p.y)+5);}}if(!(s.enemyVersion>=1)){g.enemyVersion=2;g.swarmWave=0;g.enemies=structuredClone(g.enemies);const rand=random(g.seed+g.roomNumber*15485863);let i=0;for(const e of [...g.enemies].sort((a,b)=>a.y-b.y)){if(e.y<=Math.max(p.y,p.maxY||p.y)+5||e.hp!==e.maxHp||!['swarm','slime','armored'].includes(e.type))continue;if(i++%6===0)Object.assign(e,g.makeEnemy(e.x,e.y,SPECIAL_ENEMIES[(Math.floor((i-1)/6)+g.stage+g.room)%SPECIAL_ENEMIES.length],rand));}}if(s.enemyVersion!==2){const keep=new Set(g.enemies.filter(e=>e.type==='moth').sort((a,b)=>dist(a,p)-dist(b,p)).slice(0,2));g.enemies=g.enemies.filter(e=>e.type!=='moth'||keep.has(e));g.broods=[];g.swarmTimer=Math.max(3.5,g.swarmTimer||0);g.swarmBudget=Math.min(g.swarmBudget,12+g.stage*2);g.enemyVersion=2;}g.events=[];g.particles=[];g.texts=[];g.fx=[];g.player.rx=p.x;g.player.ry=p.y;g.player.invuln=1.5;return g;}
 }
