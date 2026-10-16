@@ -1,6 +1,6 @@
 import {ENEMY_TYPES,SPECIAL_ENEMIES,specialEnemyStep,advanceEnemyIntent,specialEnemyDeath,spitBlocked,enemyCanEnter,noticesPlayer} from './enemies.mjs';
 import {prepareBoss,bossDamage,breakBossSeal,updateBoss} from './boss.mjs';
-export const VERSION='2.5.0';
+export const VERSION='2.5.1';
 export const TURN_TIME=1;
 export const COLS=13, ROWS=76;
 export const PALETTE=['#75dba7','#f3ad70','#7ac9f1','#b5a0f3'];
@@ -193,8 +193,8 @@ export class Game{
   charge(n,color=null){for(let i=0;i<4;i++)if(color===null||color===i)this.player.charges[i]=cap(this.player.charges[i]+n,0,this.player.chargeMax);}
   gainGold(n){n=Math.ceil(n*(1+(this.player.upgrades.pocket||0)*.35));this.player.gold+=n;this.stats.gold+=n;return n;}
   gainXP(n){this.player.xp+=n;while(this.player.xp>=this.player.nextXp){this.player.xp-=this.player.nextXp;this.player.level++;this.player.nextXp=Math.ceil(this.player.nextXp*1.32);this.pendingLevels=1;this.heal(4);}}
-  damage(n,reason='遺跡の罠に倒された'){const p=this.player;if(p.invuln>0||this.mode!=='play')return;if(p.shield>0){p.shield--;p.invuln=1.1;this.float('GUARD',p.x,p.y,'#b4ffdb');this.burst(p.x,p.y,'#b3ffdf',16);this.emit('guard');return;}
-    n=Math.max(1,Math.round(n*(1-this.suit.armor)*Math.pow(.88,p.upgrades.guard||0)));p.hp=Math.max(0,p.hp-n);p.invuln=this.turnBased?.9:1.05;this.shake=.2;this.flash=.17;this.float('−'+n,p.x,p.y,'#ff9daa');this.emit('hurt');if(p.hp<=0)this.finish(false,reason);}
+  damage(n,reason='遺跡の罠に倒された'){const p=this.player;if(p.invuln>0||this.mode!=='play')return;if(p.shield>0){p.shield--;p.invuln=this.turnBased?2.1:1.1;this.float('GUARD',p.x,p.y,'#b4ffdb');this.burst(p.x,p.y,'#b3ffdf',16);this.emit('guard');return;}
+    n=Math.max(1,Math.round(n*(1-this.suit.armor)*Math.pow(.88,p.upgrades.guard||0)));p.hp=Math.max(0,p.hp-n);p.invuln=this.turnBased?2.1:1.05;this.shake=.2;this.flash=.17;this.float('−'+n,p.x,p.y,'#ff9daa');this.emit('hurt');if(p.hp<=0)this.finish(false,reason);}
   finish(win,reason){if(['dead','win'].includes(this.mode))return;this.mode=win?'win':'dead';this.reason=reason;if(win)this.stats.depth=1200;this.reward=Math.max(1,this.stats.rooms*2+this.stats.terrainKills+Math.floor(this.stats.gold/65)+(win?15:0));this.meta.cores+=this.reward;this.meta.best=Math.max(this.meta.best,this.stats.depth);this.meta.runs++;if(win)this.meta.wins++;this.emit('finish',{win});}
   clearCells(cells,{chain=true,rewards=true,source='dig'}={}){
     const removed=[],colors=[0,0,0,0],bombs=[];
@@ -335,6 +335,15 @@ export class Game{
   step(dt,input={}){
     if(this.turnBased){this.updateVisuals(dt);return this.takeTurn(input);}
     this.advanceWorld(cap(dt,0,.04),input);
+  }
+  get turnDanger(){
+    const p=this.player;
+    return this.enemies.some(e=>e.awake&&dist(e,p)<=(e.intent?8:3)&&noticesPlayer(this,e))
+      ||this.broods.some(b=>dist(b,p)<=4)
+      ||this.falling.some(f=>f.cells.some(c=>Math.abs(c.x-p.x)<=1&&p.y-c.y>0&&p.y-c.y<=4))
+      ||this.hazards.some(h=>!h.hit&&dist(h,p)<=h.radius+2)
+      ||!!(this.boss?.state==='warn'&&p.y>=this.boss.attack?.fromY-2)
+      ||p.y-this.collapseFront<=5;
   }
   takeTurn(input={}){
     if(!this.turnBased||this.mode!=='play')return false;

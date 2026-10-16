@@ -26,6 +26,15 @@ test('an enemy either approaches or attacks in a turn; a drill hit interrupts it
   const g=arena(),e=g.makeEnemy(4,8,'swarm');e.timer=0;g.enemies=[e];g.takeTurn({wait:true});assert.equal(e.x,5);assert.equal(g.player.hp,100);
   g.takeTurn({wait:true});assert.equal(g.player.hp,94);g.takeTurn({dir:'left'});assert.equal(g.player.hp,94);g.takeTurn({dir:'left'});assert.equal(g.enemies.length,0);assert.equal(g.player.hp,94);
 });
+test('damage and shield loss leave two actions to respond, while realtime damage timing is unchanged',()=>{
+  for(const shield of [0,1]){
+    const g=arena(),e=g.makeEnemy(5,8,'swarm');e.timer=0;g.enemies=[e];g.player.shield=shield;
+    g.takeTurn({wait:true});const hp=g.player.hp;assert.equal(hp,shield?100:94);assert.equal(g.player.shield,0);
+    for(let i=0;i<2;i++){g.takeTurn({wait:true});assert.equal(g.player.hp,hp);}
+    g.takeTurn({wait:true});assert.equal(g.player.hp,hp-6);
+  }
+  const g=arena();g.setClockMode('realtime');g.damage(6);assert.equal(g.player.invuln,1.05);g.player.invuln=0;g.player.shield=1;g.damage(6);assert.equal(g.player.invuln,1.1);
+});
 test('falling masses give a whole input opportunity of warning, then fall one cell per action',()=>{
   const g=arena();g.grid[4][3]={c:0,hp:1};g.takeTurn({wait:true});const f=g.falling.find(f=>f.cells.some(c=>c.x===3));assert.ok(f);assert.equal(f.cells[0].y,4);assert.ok(f.delay>0);
   const before=structuredClone(f);idle(g);assert.deepEqual(f,before);g.takeTurn({wait:true});assert.equal(f.cells[0].y,5);g.takeTurn({wait:true});assert.equal(f.cells[0].y,6);
@@ -75,8 +84,38 @@ test('held input has a deliberate repeat delay and never catches up missed frame
   const q=new TurnInput();q.press('k:down',{dir:'down'},0);assert.deepEqual(q.next(0),{dir:'down'});assert.equal(q.next(449),null);assert.deepEqual(q.next(450),{dir:'down'});assert.equal(q.next(451),null);
   assert.deepEqual(q.next(100000),{dir:'down'});assert.equal(q.next(100001),null);q.release('k:down');assert.equal(q.next(200000),null);
 });
+test('direction plus the large button always digs, without inserting or repeating a wait',()=>{
+  for(const order of [['dir','wait'],['wait','dir']]){
+    const q=new TurnInput(),actions={dir:{dir:'down'},wait:{wait:true}};
+    order.forEach((id,i)=>q.press(id,actions[id],i));assert.deepEqual(q.next(16),{dir:'down'});assert.equal(q.next(32),null);
+    assert.deepEqual(q.next(500),{dir:'down'});q.release('dir');assert.equal(q.next(2000),null);
+    q.release('wait');q.press('wait',{wait:true},2100);assert.deepEqual(q.next(2100),{wait:true});assert.equal(q.next(9000),null);
+  }
+});
+test('a danger stop requires a fresh directional press and preserves deliberate recovery commands',()=>{
+  const q=new TurnInput();q.press('down',{dir:'down'},0);q.next(0);q.enqueue({heal:true});q.suspend();
+  assert.equal(q.suspended,true);assert.deepEqual(q.next(16),{heal:true});assert.equal(q.next(10000),null);
+  q.press('down',{dir:'down'},10001);assert.equal(q.next(11000),null);
+  q.release('down');q.press('down',{dir:'down'},12000);assert.equal(q.suspended,false);assert.deepEqual(q.next(12001),{dir:'down'});
+  const g=arena();assert.equal(g.turnDanger,false);g.enemies=[g.makeEnemy(4,8,'swarm')];assert.equal(g.turnDanger,true);
+  g.grid[8][5]={c:10,hp:1};assert.equal(g.turnDanger,false);g.enemies=[];
+  g.hazards=[{x:7,y:8,radius:0,hit:false}];assert.equal(g.turnDanger,true);g.hazards=[];
+  g.falling=[{cells:[{x:6,y:5}]}];assert.equal(g.turnDanger,true);g.falling=[];
+  g.collapseFront=4;assert.equal(g.turnDanger,true);
+});
 test('lethal responses end a turn without allowing later kill healing to revive the explorer',()=>{
   const g=arena();g.player.hp=1;const e=g.makeEnemy(5,8,'swarm');e.timer=0;g.enemies=[e];g.takeTurn({wait:true});assert.equal(g.mode,'dead');assert.equal(g.player.hp,0);g.heal(40);assert.equal(g.player.hp,0);assert.equal(g.takeTurn({wait:true}),false);
+});
+test('a new explorer can cross the first stratum with simple digging and potions, without a spell or dodge build',()=>{
+  for(let seed=1;seed<=24;seed++){
+    const g=new Game(seed,null,'turn');
+    for(let i=0;i<240&&g.mode==='play';i++){
+      const input=g.player.hp<45&&g.player.potions?{heal:true}:{dir:'down'};
+      if(!g.takeTurn(input))g.takeTurn({wait:true});
+      g.events=[];
+    }
+    assert.equal(g.stats.rooms,1,`seed ${seed}: ${g.mode} at ${g.turnCount} turns`);assert.ok(g.player.hp>0);assert.ok(g.stats.kills>=30);assert.ok(g.stats.cascades>2);assert.equal(g.stats.casts,0);
+  }
 });
 test('ordinary turn inputs can complete all eighteen strata, keep cascades and defeat three guardians',()=>{
   const {game:g,frames}=playRun(1,null,4000,'turn');assert.equal(g.mode,'win');assert.equal(g.stats.rooms,18);assert.equal(g.stats.bosses,3);assert.ok(g.stats.cascades>100);assert.ok(frames<3000);assert.ok(g.turnCount>1000);

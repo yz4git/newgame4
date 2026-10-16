@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 
-test('game shell supports realtime controls, turn selection, quick taps, held waits, pauses and continuation',async()=>{
+test('game shell supports realtime controls, turn selection, quick taps, safe holds, pauses and continuation',async(t)=>{
+  const now=Date.now;Date.now=()=>1;t.after(()=>{Date.now=now;});
   const html=await readFile(new URL('../index.html',import.meta.url),'utf8'),nodes=new Map(),windowEvents=new Map(),documentEvents=new Map(),storage=new Map(),frames=[];
   class Node{
     constructor(id='',dataset={}){this.id=id;this.dataset=dataset;this.listeners=new Map();this.classes=new Set();this.children=new Map();this.disabled=false;this.style={setProperty(k,v){this[k]=v;}};this.classList={add:(x)=>this.classes.add(x),remove:(x)=>this.classes.delete(x),toggle:(x,on)=>{if(on??!this.classes.has(x))this.classes.add(x);else this.classes.delete(x);},contains:x=>this.classes.has(x)};}
@@ -46,11 +47,18 @@ test('game shell supports realtime controls, turn selection, quick taps, held wa
   nodes.get('pulse').fire('click');tick(30);assert.equal(state().turnCount,turns);
   nodes.get('rush').fire('pointerdown',{pointerId:5});nodes.get('rush').fire('pointercancel',{pointerId:5});tick(30);assert.equal(state().turnCount,turns);
   const shownTurn=()=>Number(nodes.get('clock-status').textContent.match(/TURN ([\d,]+)/)[1].replaceAll(',',''));
-  nodes.get('rush').fire('pointerdown',{pointerId:6});tick(1);assert.equal(shownTurn(),++turns);tick(24);assert.equal(shownTurn(),turns);tick(4);assert.equal(shownTurn(),++turns);nodes.get('rush').fire('pointerup',{pointerId:6});tick(60);assert.equal(state().turnCount,turns);
+  nodes.get('rush').fire('pointerdown',{pointerId:6});tick(1);assert.equal(shownTurn(),++turns);tick(600);assert.equal(shownTurn(),turns);nodes.get('rush').fire('pointerup',{pointerId:6});tick(30);assert.equal(state().turnCount,turns);
   windowEvents.get('keydown')({code:'Space',preventDefault(){}});windowEvents.get('keyup')({code:'Space'});tick(30);assert.equal(state().turnCount,++turns);
   // Pausing clears commands that have not reached a frame yet, and continuation stays frozen.
   nodes.get('rush').fire('pointerdown',{pointerId:7});nodes.get('pause').fire('click');tick(30);assert.equal(state().turnCount,turns);nodes.get('overlay').fire('click',{target:new Node('',{action:'home'})});nodes.get('overlay').fire('click',{target:new Node('',{action:'continue'})});tick(1,60000);assert.equal(state().turnCount,turns);assert.equal(nodes.get('cast-name').textContent,'待つ');
   // New expeditions use the title selection; existing records retain their own clock.
   nodes.get('pause').fire('click');nodes.get('overlay').fire('click',{target:new Node('',{clock:'realtime'})});assert.equal(state().clockMode,'realtime');const beforeRealtime=state().time;nodes.get('overlay').fire('click',{target:new Node('',{action:'resume'})});tick(60);nodes.get('pause').fire('click');assert.ok(state().time>beforeRealtime);
   nodes.get('overlay').fire('click',{target:new Node('',{action:'home'})});nodes.get('overlay').fire('click',{target:new Node('',{clock:'turn'})});assert.match(nodes.get('overlay').innerHTML,/data-clock="turn" aria-pressed="true"/);nodes.get('overlay').fire('click',{target:new Node('',{action:'new'})});assert.equal(state().clockMode,'turn');assert.equal(state().turnCount,0);
+  // The old two-finger drilling gesture cannot become repeated waiting.
+  nodes.get('rush').fire('pointerdown',{pointerId:20});nodes.get('dpad').fire('pointerdown',{pointerId:21,target:dirs.find(n=>n.dataset.dir==='down')});
+  for(let i=0;i<12&&!nodes.get('clock-status').textContent.includes('指を離して');i++)tick(1,500);
+  assert.match(nodes.get('clock-status').textContent,/指を離して/);const dangerTurns=shownTurn();tick(600);assert.equal(shownTurn(),dangerTurns);
+  nodes.get('pause').fire('click');assert.ok(state().player.y>=3);assert.ok(state().player.hp>0);
+  nodes.get('overlay').fire('click',{target:new Node('',{action:'resume'})});tick(60);assert.equal(shownTurn(),dangerTurns);
+  nodes.get('dpad').fire('pointerdown',{pointerId:22,target:dirs.find(n=>n.dataset.dir==='down')});nodes.get('dpad').fire('pointerup',{pointerId:22});tick(30);assert.equal(state().turnCount,dangerTurns+1);
 });
