@@ -26,6 +26,22 @@ One direction tap performs one move, mining hit or attack. The large action butt
 
 Enemies, player gravity, falling groups, fluids, reinforcements, attack warnings, overhead collapse and cooldowns advance only on accepted actions. A falling group gets a whole decision of warning, then falls one cell per action. New creatures wait before acting. Ordinary creatures approach or attack, and a drill hit interrupts the target's response. Damage and shield consumption protect the explorer for the next two accepted turns, leaving time to retreat, attack or heal without taking damage on every input. The HUD shows remaining protected actions; realtime damage intervals, creature counts and specialist varieties are unchanged. Guardian column warnings allow two moves before striking. Freeze and resonance cooldowns count turns; equipment/perk speed bonuses become attack strength. Visual flashes can fade while the world clock is stopped. Saves preserve the pending warnings and timers without advancing a turn or adding invulnerability on resume.
 
+## Terrain tactics (v2.6)
+
+Horizontal movement pushes a neighboring round boulder into an empty cell and follows it; upward/downward drilling still breaks it, and a blocked push falls back to mining. The same directions push frozen creatures with **氷棺の印**. Pushes never overwrite enemies, falling masses, fixtures, treasures or the gate. Dotted paths and landing outlines show where a moving mass, or an adjacent boulder after a push, would land in the current terrain; other future actions may change that projection.
+
+Ordinary melee creatures mark a fixed target cell before striking. One accepted turn (0.65 seconds in real time) gives the explorer a chance to dodge or interrupt. A missed attack leaves an **OPEN** recovery window. Scarab charges break soft/hard seams and strike other creatures; spore volleys hit the first creature, barrel or blocking terrain on their line. A barrel or blast tick can then trigger a chain explosion. These kills retain rewards and terrain synergies, and guardian shell gates still prevent skipping encounters.
+
+Four nests in each stratum mix three short setups: a boulder beside a drop shaft, explosives guarded by blast ticks and shield turtles, and a side passage with healing behind a shield. Their order and side vary by seed and stratum. Dense nests, all six specialists and the two-moth cap remain. Earlier saves gain setups only in untouched depth at least ten rows beyond the explored area.
+
+Three new checkpoint perks change how terrain is used:
+
+- **震地の楔**: after a fall of at least two cells, landing masses send a horizontal shockwave. Hard walls block it; multiple tiles in one mass do not hit the same foe repeatedly.
+- **氷棺の印**: frozen creatures can be pushed, and frozen kills leave movable ice blocks as shields and footholds. Ice lasts eight accepted turns or eight real-time seconds, with longer duration on repeat upgrades. The saved world clock determines expiry; thinking and menus freeze it.
+- **鉱脈の余韻**: a chain of at least eight colored minerals stores one wider resonance or fallback pulse. It consumes no extra crystals, and cooldowns remain in force. The HUD marks the stored charge; repeat upgrades enlarge its range further.
+
+The first checkpoint always offers one of these tactics alongside two other choices. Existing equipment, upgrades, mode selection and saves are retained.
+
 ## Controls
 
 - Touch: hold a direction to move and mine. Hold **掘る** for fast drilling. Up performs a one-cell hop from supported ground and mines overhead rock. Independent pointer capture supports movement plus drilling together.

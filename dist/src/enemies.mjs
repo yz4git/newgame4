@@ -1,7 +1,7 @@
 export const ENEMY_TYPES={
-  rusher:{name:'突進スカラベ',icon:'»',color:'#edac73',hp:23,growth:5,desc:'角を光らせ、直線上に3マス突進。横へ避けるか、凍結で止めよう。'},
+  rusher:{name:'突進スカラベ',icon:'»',color:'#edac73',hp:23,growth:5,desc:'角を光らせ、直線上に3マス突進。横へ避けて敵や岩壁へ誘導できる。'},
   burrower:{name:'穿孔獣',icon:'▼',color:'#c9ab88',hp:25,growth:5,desc:'鉱脈を掘って接近する。通った穴で足場も崩れる。落盤を誘って迎え撃とう。'},
-  spitter:{name:'胞子砲花',icon:'✿',color:'#c7b4ed',hp:21,growth:4,desc:'口を向けた直線に胞子弾。壁が弾を止めるので、射線を外そう。'},
+  spitter:{name:'胞子砲花',icon:'✿',color:'#c7b4ed',hp:21,growth:4,desc:'直線に胞子弾。射線を外して敵に当てたり、爆薬を誘爆させよう。岩と氷塊で防げる。'},
   splitter:{name:'分裂ゼリー',icon:'◒',color:'#87d8d2',hp:26,growth:5,desc:'通常撃破で小さな2体に分裂。落盤・爆風・凍結で倒すと分裂を防げる。'},
   bomber:{name:'爆裂ダニ',icon:'✦',color:'#ee9a89',hp:18,growth:4,desc:'近づくと点滅して周囲に爆発。敵も岩も巻き込む。凍結して倒せば不発になる。'},
   shield:{name:'盾殻ガメ',icon:'⬡',color:'#a7bed5',hp:29,growth:6,desc:'正面を盾で守る。横・背後・落盤・共鳴が有効。正面も3回叩けば盾を崩せる。'},
@@ -20,7 +20,7 @@ export function noticesPlayer(g,e){
 function warn(g,e,intent){e.intent=intent;g.emit('enemyWarn');}
 export function specialEnemyStep(g,e){
   const p=g.player,[dx,dy]=heading(e,p),d=dist(e,p);
-  if(e.type==='rusher'&&(e.x===p.x||e.y===p.y)&&d>1&&d<=7&&enemyCanEnter(g,e,e.x+dx,e.y+dy)){
+  if(e.type==='rusher'&&(e.x===p.x||e.y===p.y)&&d>1&&d<=7&&(!g.at(e.x+dx,e.y+dy)||[0,1,2,3,10,11,12].includes(g.at(e.x+dx,e.y+dy).c))&&!g.occupied(e.x+dx,e.y+dy)&&!g.isFixture(e.x+dx,e.y+dy)){
     warn(g,e,{kind:'rush',dx,dy,delay:.7,left:3});e.timer=1.8;return true;
   }
   if(e.type==='burrower'){
@@ -32,7 +32,7 @@ export function specialEnemyStep(g,e){
     }
   }
   if(e.type==='spitter'){
-    if(d<9&&enemyCanEnter(g,e,e.x+dx,e.y+dy)&&g.hazards.length<32)warn(g,e,{kind:'spit',dx,dy,delay:.75});
+    if(d<9&&(!g.at(e.x+dx,e.y+dy)||g.at(e.x+dx,e.y+dy).c===12)&&!g.occupied(e.x+dx,e.y+dy)&&g.hazards.length<32)warn(g,e,{kind:'spit',dx,dy,delay:.75});
     e.timer=2.2;return true;
   }
   if(e.type==='bomber'&&d<=4){warn(g,e,{kind:'bomb',delay:1});e.timer=2;return true;}
@@ -44,29 +44,46 @@ export function advanceEnemyIntent(g,e,dt){
   const a=e.intent;if(!a)return;
   if(e.stun>0){e.intent=null;e.timer=Math.max(.8,e.timer);return;}
   a.delay-=dt;if(a.delay>0)return;
-  if(a.kind==='rush'){
+  if(a.kind==='bite'){
+    e.intent=null;e.timer=g.turnBased?2.1:1.2;e.recovery=g.turnBased?1.1:.6;
+    if(presentTarget(g,e,a))g.damage(e.type==='hunter'?22:e.type==='rusher'?14+g.stage:e.type==='moth'?5+g.stage:e.type==='swarm'?6+g.stage:11+g.stage*2,'遺跡の魔物に倒された');
+    else{g.float('空振り',a.x,a.y,'#bcd1bf');g.stats.feints=(g.stats.feints||0)+1;}
+    g.fx.push({kind:'strike',x:a.x+.5,y:a.y+.5,radius:.45,color:'#edbb96',life:.2,max:.2});
+  }else if(a.kind==='rush'){
     for(let i=0,n=g.turnBased?a.left:1;i<n&&e.intent;i++){
       const x=e.x+a.dx,y=e.y+a.dy;
       if(x===g.player.x&&y===g.player.y){g.damage(14+g.stage,'突進スカラベに突き飛ばされた');e.intent=null;e.stun=.4;e.timer=1.1;return;}
-      if(enemyCanEnter(g,e,x,y)){e.x=x;e.y=y;a.left--;a.delay=.09;if(a.left<=0)e.intent=null;}
+      const t=g.at(x,y);
+      if(t&&[0,1,2,3,10,11,12].includes(t.c)&&!g.isFixture(x,y)){
+        g.clearCells([{x,y}],{chain:false,rewards:false,source:'enemyRush'});g.emit('stone');
+        if(!g.enemies.includes(e))return;
+      }
+      const victim=g.enemies.find(o=>o!==e&&o.x===x&&o.y===y);
+      if(victim){g.attackEnemy(victim,32+g.stage*5,'enemyRush');if(!g.enemies.includes(e))return;}
+      if(g.boss&&Math.abs(x-g.boss.x)<=1&&Math.abs(y-g.boss.y)<=1)g.hitBoss(32+g.stage*5,'enemyRush');
+      if(enemyCanEnter(g,e,x,y)){e.x=x;e.y=y;a.left--;a.delay=.09;if(a.left<=0){e.intent=null;e.timer=g.turnBased?2.1:1.1;e.recovery=g.turnBased?1.1:.5;}}
       else{e.intent=null;e.stun=.65;e.timer=1.1;}
     }
   }else if(a.kind==='spit'){
     e.intent=null;e.shots=(e.shots||0)+1;const volley=`${g.ticks}/${e.x}/${e.y}/${e.shots}`;
-    for(let i=1;i<=6&&g.hazards.length<40;i++){const x=e.x+a.dx*i,y=e.y+a.dy*i;if(g.at(x,y)||g.occupied(x,y))break;g.hazards.push({x,y,delay:.08+i*.09,radius:0,damage:10+g.stage,kind:'spit',volley,hit:false});}
+    for(let i=1;i<=6&&g.hazards.length<40;i++){const x=e.x+a.dx*i,y=e.y+a.dy*i,t=g.at(x,y);if(t&&t.c!==12||g.occupied(x,y))break;g.hazards.push({x,y,delay:.08+i*.09,radius:0,damage:10+g.stage,kind:'spit',volley,hit:false});if(t?.c===12)break;}
     g.emit('enemyFire');
   }else if(a.kind==='bomb'){e.intent=null;g.attackEnemy(e,e.hp+100,'self');}
 }
 export function spitBlocked(g,h){
   if(h.kind!=='spit')return false;
   if(h.blocked)return true;
-  if(!g.at(h.x,h.y)&&!g.occupied(h.x,h.y))return false;
+  const t=g.at(h.x,h.y),victim=g.enemies.find(e=>e.x===h.x&&e.y===h.y);
+  if(!t&&!g.occupied(h.x,h.y)&&!victim)return false;
   for(const other of g.hazards)if(other.volley===h.volley)other.blocked=true;
+  if(t?.c===12)g.clearCells([{x:h.x,y:h.y}],{chain:false,rewards:false,source:'enemySpit'});
+  else if(victim&&!t&&!g.occupied(h.x,h.y))g.attackEnemy(victim,26+g.stage*4,'enemySpit');
   return true;
 }
+function presentTarget(g,e,a){return g.player.x===a.x&&g.player.y===a.y&&dist(e,a)<=1&&!g.at(a.x,a.y)&&!g.occupied(a.x,a.y);}
 export function specialEnemyDeath(g,e,source,cold){
   if(e.type==='bomber'&&!cold)g.explode(e.x,e.y,1,52+g.stage*5,'barrel');
-  if(e.type!=='splitter'||cold||['rock','barrel','lava','blast'].includes(source))return;
+  if(e.type!=='splitter'||cold||['rock','barrel','lava','blast','shock','enemyRush'].includes(source))return;
   let count=0;
   for(const [dx,dy]of steps){const x=e.x+dx,y=e.y+dy;if(count>=2||g.enemies.length>=105)break;if(!enemyCanEnter(g,e,x,y)||g.isFixture(x,y)||dist({x,y},g.player)<1)continue;const child=g.makeEnemy(x,y,'swarm');child.hp=child.maxHp=8+g.stage*2;child.rewardScale=.25;child.stun=.45;g.enemies.push(child);count++;}
   if(count){g.float('分裂！',e.x,e.y,'#a7ece7');g.emit('split');}

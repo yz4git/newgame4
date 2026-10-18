@@ -10,8 +10,8 @@ export function bossDodge(g,dir){
  const target=safe.sort((a,b)=>Math.abs(a-p.x)-Math.abs(b-p.x))[0];
  return target===undefined?dir:target===p.x?null:target>p.x?'right':'left';
 }
-export function playRun(seed=1,meta=null,maxFrames=60000,clockMode='realtime'){
- const g=new Game(seed,meta,clockMode),priority=['leech','edge','guard','heart','quick','heal','shield','magic','pulse','chainAir','tank','collapse','bombAir','pocket'];let frames=0;const log=[];
+export function playRun(seed=1,meta=null,maxFrames=60000,clockMode='realtime',build='balanced'){
+ const g=new Game(seed,meta,clockMode),priority=build==='tactics'?['shock','ice','wide','leech','edge','guard','heart','quick','heal','shield','magic','pulse','chainAir','tank','collapse','bombAir','pocket']:['leech','edge','guard','heart','quick','shock','ice','wide','heal','shield','magic','pulse','chainAir','tank','collapse','bombAir','pocket'];let frames=0;const log=[];
  for(;frames<maxFrames&&!['dead','win'].includes(g.mode);frames++){
   if(g.mode==='level'){g.chooseUpgrade(g.choice.slice().sort((a,b)=>priority.indexOf(a.id)-priority.indexOf(b.id))[0].id);continue;}
   if(g.mode==='loot'){const it=g.loot.item,old=g.loot.slot==='drills'?g.drill:g.suit;g.takeEquipment(g.loot.slot==='drills'?it.power>=old.power:it.armor>=old.armor);continue;}

@@ -22,16 +22,16 @@ test('one movement, mining hit or attack gives the world exactly one response',(
   g.grid[8][8]={c:11,hp:3};g.takeTurn({dir:'right'});assert.equal(g.at(8,8).hp,2);assert.equal(g.player.x,7);assert.equal(g.turnCount,2);
   const foe=g.makeEnemy(8,8,'shield');g.grid[8][8]=null;g.enemies=[foe];const hp=foe.hp;g.takeTurn({dir:'right'});assert.ok(foe.hp<hp);assert.equal(g.turnCount,3);
 });
-test('an enemy either approaches or attacks in a turn; a drill hit interrupts its response',()=>{
+test('an enemy approaches, then warns; a drill hit interrupts the warned strike',()=>{
   const g=arena(),e=g.makeEnemy(4,8,'swarm');e.timer=0;g.enemies=[e];g.takeTurn({wait:true});assert.equal(e.x,5);assert.equal(g.player.hp,100);
-  g.takeTurn({wait:true});assert.equal(g.player.hp,94);g.takeTurn({dir:'left'});assert.equal(g.player.hp,94);g.takeTurn({dir:'left'});assert.equal(g.enemies.length,0);assert.equal(g.player.hp,94);
+  g.takeTurn({wait:true});assert.equal(g.player.hp,100);assert.equal(e.intent.kind,'bite');g.takeTurn({dir:'left'});assert.equal(e.intent,null);assert.equal(g.player.hp,100);g.takeTurn({dir:'left'});assert.equal(g.enemies.length,0);assert.equal(g.player.hp,100);
 });
 test('damage and shield loss leave two actions to respond, while realtime damage timing is unchanged',()=>{
   for(const shield of [0,1]){
-    const g=arena(),e=g.makeEnemy(5,8,'swarm');e.timer=0;g.enemies=[e];g.player.shield=shield;
-    g.takeTurn({wait:true});const hp=g.player.hp;assert.equal(hp,shield?100:94);assert.equal(g.player.shield,0);
-    for(let i=0;i<2;i++){g.takeTurn({wait:true});assert.equal(g.player.hp,hp);}
-    g.takeTurn({wait:true});assert.equal(g.player.hp,hp-6);
+    const g=arena();g.player.shield=shield;const danger=()=>{g.hazards.push({x:6,y:8,delay:0,radius:0,damage:6,kind:'bolt',hit:false});g.takeTurn({wait:true});};
+    danger();const hp=g.player.hp;assert.equal(hp,shield?100:94);assert.equal(g.player.shield,0);
+    for(let i=0;i<2;i++){danger();assert.equal(g.player.hp,hp);}
+    danger();assert.equal(g.player.hp,hp-6);
   }
   const g=arena();g.setClockMode('realtime');g.damage(6);assert.equal(g.player.invuln,1.05);g.player.invuln=0;g.player.shield=1;g.damage(6);assert.equal(g.player.invuln,1.1);
 });
@@ -104,7 +104,7 @@ test('a danger stop requires a fresh directional press and preserves deliberate 
   g.collapseFront=4;assert.equal(g.turnDanger,true);
 });
 test('lethal responses end a turn without allowing later kill healing to revive the explorer',()=>{
-  const g=arena();g.player.hp=1;const e=g.makeEnemy(5,8,'swarm');e.timer=0;g.enemies=[e];g.takeTurn({wait:true});assert.equal(g.mode,'dead');assert.equal(g.player.hp,0);g.heal(40);assert.equal(g.player.hp,0);assert.equal(g.takeTurn({wait:true}),false);
+  const g=arena();g.player.hp=1;const e=g.makeEnemy(5,8,'swarm');e.timer=0;g.enemies=[e];g.takeTurn({wait:true});assert.equal(g.mode,'play');g.takeTurn({wait:true});assert.equal(g.mode,'dead');assert.equal(g.player.hp,0);g.heal(40);assert.equal(g.player.hp,0);assert.equal(g.takeTurn({wait:true}),false);
 });
 test('a new explorer can cross the first stratum with simple digging and potions, without a spell or dodge build',()=>{
   for(let seed=1;seed<=24;seed++){

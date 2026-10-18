@@ -38,17 +38,21 @@ export function drawSpecialEnemy(c,s,e,g,clock){
     if(!(e.guardBroken>0)){polygon(c,[[-.34,-.33],[0,-.46],[.34,-.33],[.27,-.03],[0,.12],[-.27,-.03]],body,light);polygon(c,[[0,-.38],[0,.02]],null,'#5f7e9b');if(e.guardHits)polygon(c,[[-.14,-.32],[.04,-.17],[-.1,-.04]],null,'#3d596e');}
     else for(const side of [-1,1])polygon(c,[[side*.28,-.26],[side*.43,-.1],[side*.27,.03]],body,light);c.restore();
   }
-  if(e.frozen>0){polygon(c,[[-.43,-.26],[0,-.48],[.43,-.26],[.4,.29],[0,.44],[-.4,.29]],'#b7efff19','#c8f4ff');}
   if(e.hp<e.maxHp){c.fillStyle='#0a1721';c.fillRect(-.35,-.59,.7,.06);c.fillStyle='#ffd19c';c.fillRect(-.35,-.59,.7*Math.max(0,e.hp/e.maxHp),.06);}
   c.restore();return true;
 }
 export function drawEnemyIntent(c,s,e,g,clock){
   const a=e.intent;if(!a)return;c.save();c.lineWidth=1;
   const color=a.kind==='spit'?'#d2eca0':a.kind==='bomb'?'#ffb097':'#ffd295';c.strokeStyle=color;c.fillStyle=color+'20';
-  if(a.kind==='bomb'){
+  if(a.kind==='bite'){
+    c.fillRect(a.x*s,a.y*s,s,s);c.strokeRect(a.x*s+2,a.y*s+2,s-4,s-4);
+    polygon(c,[[a.x*s+s*.22,a.y*s+s*.22],[a.x*s+s*.78,a.y*s+s*.78]],null,color);
+    polygon(c,[[a.x*s+s*.78,a.y*s+s*.22],[a.x*s+s*.22,a.y*s+s*.78]],null,color);
+    c.fillStyle=color;c.font=`bold ${s*.28}px sans-serif`;c.textAlign='right';c.fillText(g.turnBased?'1T':'!',(a.x+.88)*s,(a.y+.26)*s);
+  }else if(a.kind==='bomb'){
     for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const x=(e.x+dx)*s,y=(e.y+dy)*s;c.fillRect(x,y,s,s);c.strokeRect(x+2,y+2,s-4,s-4);}
   }else for(let i=1;i<=(a.kind==='rush'?a.left:6);i++){
-    const x=e.x+a.dx*i,y=e.y+a.dy*i;if(g.at(x,y)||g.occupied(x,y))break;c.fillRect(x*s,y*s,s,s);c.save();c.translate((x+.5)*s,(y+.5)*s);c.rotate(Math.atan2(a.dy,a.dx));polygon(c,[[-s*.14,-s*.12],[s*.1,0],[-s*.14,s*.12]],null,color);c.restore();
+    const x=e.x+a.dx*i,y=e.y+a.dy*i,t=g.at(x,y),open=a.kind==='rush'?[0,1,2,3,10,11,12]:[12];if(g.occupied(x,y)||t&&(!open.includes(t.c)||g.isFixture(x,y)))break;c.fillRect(x*s,y*s,s,s);c.save();c.translate((x+.5)*s,(y+.5)*s);c.rotate(Math.atan2(a.dy,a.dx));polygon(c,[[-s*.14,-s*.12],[s*.1,0],[-s*.14,s*.12]],null,color);c.restore();if(a.kind==='spit'&&(t||g.enemies.some(o=>o!==e&&o.x===x&&o.y===y)))break;
   }
   c.globalAlpha=.6+Math.sin(clock*22)*.3;c.fillStyle=color;c.font=`bold ${s*.35}px sans-serif`;c.textAlign='center';c.fillText('!',(e.rx+.5)*s,(e.ry-.13)*s);c.restore();
 }

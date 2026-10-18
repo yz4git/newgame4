@@ -1,4 +1,4 @@
-const terrainSources=new Set(['rock','barrel','lava']);
+const terrainSources=new Set(['rock','barrel','lava','shock','enemyRush','enemySpit']);
 export function prepareBoss(b){
   if(!b||b.version===2)return b;
   Object.assign(b,{version:2,phase:Math.min(2,Math.floor((1-b.hp/b.maxHp)*3)),state:'guard',timer:1.3,attacks:0,engaged:false,stagger:0,sealCharges:0,hitCooldown:0,attack:null});
