@@ -42,6 +42,12 @@ Three new checkpoint perks change how terrain is used:
 
 The first checkpoint always offers one of these tactics alongside two other choices. Existing equipment, upgrades, mode selection and saves are retained.
 
+## Ruins artwork (v2.7)
+
+Six distinct deep backgrounds replace the flat checkerboard: a root-covered sanctuary, sandstone arcades, a drowned astrolabe, fungal buttresses, bronze furnace machinery and a shattered celestial archive. Camera parallax, restrained light shafts and ambient motes stay behind the playable cells. Faceted mineral geodes, beveled stone, ice, supplies and brass-bound chests retain their exact grid footprints. The explorer has layered equipment, a glass visor, headlamp and direction-aware drill; biome creatures, six specialists and three guardian forms have individual material shading and silhouettes. Relics and gates use carved stone, brass and a recessed animated portal. Mining throws lit shards; blasts, frost, lightning, healing and shockwaves have separate shapes, and damage flashes tint the screen edges.
+
+Terrain textures are painted once into 96px sprites and cached for the current region; visible veins, damaged stone, push arrows, ice expiry and warnings remain dynamic. World artwork uses the simulation clock in turn mode, so thinking does not animate enemies, hazards or terrain. Rendering never consumes game RNG or changes saves. All art is local Canvas code and is precached by the PWA, with no external image downloads or runtime packages. The instrument surfaces in the HUD and controls match the brass/teal palette without moving touch targets.
+
 ## Controls
 
 - Touch: hold a direction to move and mine. Hold **掘る** for fast drilling. Up performs a one-cell hop from supported ground and mines overhead rock. Independent pointer capture supports movement plus drilling together.
@@ -59,4 +65,4 @@ npm run build
 
 Serve the repository root or `dist/` on a static host. `.openai/hosting.json` retains the existing Sites project identity. Save data is local to the browser and origin. Save format 3 restores moving masses, collapse position and queued exit rewards; format 2 migrates the character's equipment, growth and region into a newly generated shaft without overwriting the old record.
 
-`src/engine.mjs`: mining, gravity, support, cascades and progression. `src/turn-input.mjs`: deliberate taps and held-input repetition. `src/boss.mjs`: guardian shells, warnings and core openings. `src/render.mjs`: Canvas world. `src/app.mjs`: input, UI and storage. `src/audio.mjs`: sound synthesis. Tests cover initial world suspension, actor collisions, supported nests, specialist actions, three-part guardian encounters and dodges, landing chains, uninterrupted drilling, mobile pointer input and save migration. The automated pilot uses ordinary movement, mining and resonance inputs, including stepping out of warned guardian columns.
+`src/engine.mjs`: mining, gravity, support, cascades and progression. `src/turn-input.mjs`: deliberate taps and held-input repetition. `src/boss.mjs`: guardian shells, warnings and core openings. `src/render.mjs`: Canvas composition; `src/world-art.mjs`, `src/actor-art.mjs`, `src/enemy-art.mjs`, `src/prop-art.mjs` and `src/effects-art.mjs`: cached terrain, creatures, props and effects. `src/app.mjs`: input, UI and storage. `src/audio.mjs`: sound synthesis. Tests cover initial world suspension, actor collisions, supported nests, specialist actions, three-part guardian encounters and dodges, landing chains, uninterrupted drilling, mobile pointer input and save migration. The automated pilot uses ordinary movement, mining and resonance inputs, including stepping out of warned guardian columns.
