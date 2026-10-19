@@ -151,7 +151,7 @@ export class FeverGame extends Game{
   }
   advanceWorld(dt,input={}){
     this.updateVisuals(dt);if(this.mode!=='play')return;
-    if(!this.started){if(!input.dir&&!input.tap&&!input.rush&&!input.pulse)return;this.started=true;this.messageTimer=0;this.emit('arcadeStart');}
+    if(!this.started){if(!input.dir&&!input.tap&&!input.rush&&!input.pulse&&!input.start)return;this.started=true;this.messageTimer=0;this.emit('arcadeStart');}
     dt=Math.min(dt,this.fever.remaining);if(dt<=0){this.finish();return;}
     const f=this.fever,p=this.player;f.remaining=Math.max(0,f.remaining-dt);this.time+=dt;this.roomTime+=dt;this.ticks++;
     f.active=Math.max(0,f.active-dt);this.comboTimer=Math.max(0,this.comboTimer-dt);if(!this.comboTimer)this.combo=0;

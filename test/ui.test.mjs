@@ -80,6 +80,7 @@ test('game shell supports realtime controls, turn selection, quick taps, safe ho
   const record=JSON.parse(storage.get('relic-delve-fever-best-v1'));assert.ok(record.score>0);assert.equal(record.runs,1);tick(30,100);assert.equal(JSON.parse(storage.get('relic-delve-fever-best-v1')).runs,1);
   assert.equal(storage.get('drill-delve-run-v3'),expeditionRecord);assert.equal(storage.get('drill-delve-meta-v1'),campRecord);
   nodes.get('overlay').fire('click',{target:new Node('',{action:'fever-retry'})});assert.equal(arcade().game.state.seed,pausedArcade.game.state.seed);assert.equal(arcade().fever.remaining,90);assert.equal(arcade().fever.score,0);
-  nodes.get('pause').fire('click');nodes.get('overlay').fire('click',{target:new Node('',{action:'home'})});nodes.get('overlay').fire('click',{target:new Node('',{mode:'expedition'})});assert.match(nodes.get('overlay').innerHTML,/data-clock=/);nodes.get('overlay').fire('click',{target:new Node('',{action:'continue'})});assert.ok(!nodes.get('game-shell').classList.contains('fever-mode'));assert.equal(state().clockMode,'turn');
+  nodes.get('rush').fire('pointerdown',{pointerId:33});nodes.get('rush').fire('pointerup',{pointerId:33});tick(2);nodes.get('pause').fire('click');assert.ok(arcade().game.state.started);assert.ok(arcade().fever.remaining<90);
+  nodes.get('overlay').fire('click',{target:new Node('',{action:'home'})});nodes.get('overlay').fire('click',{target:new Node('',{mode:'expedition'})});assert.match(nodes.get('overlay').innerHTML,/data-clock=/);nodes.get('overlay').fire('click',{target:new Node('',{action:'continue'})});assert.ok(!nodes.get('game-shell').classList.contains('fever-mode'));assert.equal(state().clockMode,'turn');
 
 });

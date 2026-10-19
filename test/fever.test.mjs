@@ -7,7 +7,7 @@ const save=g=>JSON.stringify(g.serialize());
 const tick=(g,n,input={})=>{for(let i=0;i<n;i++){g.step(1/60,input);g.events=[];}};
 test('the arcade waits for its first gesture, then automatically mines for exactly 90 active seconds',()=>{
   const g=new FeverGame(42),before=save(g);tick(g,3600);assert.equal(save(g),before);
-  g.step(1/60,{rush:true});assert.ok(g.started);tick(g,600);assert.ok(g.depth>150);assert.ok(g.stats.blocks>100);assert.ok(g.fever.remaining<81);
+  g.step(1/60,{start:true});assert.ok(g.started);tick(g,600);assert.ok(g.depth>150);assert.ok(g.stats.blocks>100);assert.ok(g.fever.remaining<81);
   g.mode='pause';const paused=save(g);tick(g,3600,{rush:true,pulse:true,dir:'left'});assert.equal(save(g),paused);g.mode='play';
   tick(g,4800);assert.equal(g.mode,'fever-result');assert.equal(g.fever.remaining,0);assert.ok(Math.abs(g.time-FEVER_DURATION)<1e-6);assert.equal(g.player.hp,100);
   const result=save(g);tick(g,600,{rush:true,dir:'right',pulse:true});assert.equal(save(g),result);
