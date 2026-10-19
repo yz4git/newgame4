@@ -61,4 +61,25 @@ test('game shell supports realtime controls, turn selection, quick taps, safe ho
   nodes.get('pause').fire('click');assert.ok(state().player.y>=3);assert.ok(state().player.hp>0);
   nodes.get('overlay').fire('click',{target:new Node('',{action:'resume'})});tick(60);assert.equal(shownTurn(),dangerTurns);
   nodes.get('dpad').fire('pointerdown',{pointerId:22,target:dirs.find(n=>n.dataset.dir==='down')});nodes.get('dpad').fire('pointerup',{pointerId:22});tick(30);assert.equal(state().turnCount,dangerTurns+1);
+  // The arcade shares controls but keeps expedition records and the camp intact.
+  nodes.get('pause').fire('click');nodes.get('overlay').fire('click',{target:new Node('',{action:'home'})});
+  const expeditionRecord=storage.get('drill-delve-run-v3'),campRecord=storage.get('drill-delve-meta-v1');
+  nodes.get('overlay').fire('click',{target:new Node('',{mode:'fever'})});assert.match(nodes.get('overlay').innerHTML,/90秒/);assert.doesNotMatch(nodes.get('overlay').innerHTML,/data-clock=/);
+  nodes.get('overlay').fire('click',{target:new Node('',{action:'fever-new'})});assert.ok(nodes.get('game-shell').classList.contains('fever-mode'));assert.equal(nodes.get('cast-name').textContent,'GO');
+  const arcade=()=>JSON.parse(storage.get('relic-delve-fever-run-v1'));
+  tick(120);nodes.get('pause').fire('click');assert.equal(arcade().fever.remaining,90);assert.equal(arcade().fever.score,0);nodes.get('overlay').fire('click',{target:new Node('',{action:'resume'})});
+  // A touch entirely between frames still steers once and starts the clock.
+  nodes.get('dpad').fire('pointerdown',{pointerId:30,clientX:110,clientY:60,target:dirs.find(n=>n.dataset.dir==='right')});nodes.get('dpad').fire('pointerup',{pointerId:30});tick(2);nodes.get('pause').fire('click');
+  assert.equal(arcade().game.state.player.x,7);assert.ok(arcade().fever.remaining<90);assert.equal(storage.get('drill-delve-run-v3'),expeditionRecord);assert.equal(storage.get('drill-delve-meta-v1'),campRecord);
+  const remaining=arcade().fever.remaining;nodes.get('overlay').fire('click',{target:new Node('',{action:'guide'})});tick(200,100);assert.match(nodes.get('overlay').innerHTML,/10秒間の3列フィーバー/);assert.equal(arcade().fever.remaining,remaining);
+  nodes.get('overlay').fire('click',{target:new Node('',{action:'guide-back'})});nodes.get('overlay').fire('click',{target:new Node('',{action:'home'})});nodes.get('overlay').fire('click',{target:new Node('',{action:'fever-continue'})});nodes.get('pause').fire('click');assert.equal(arcade().fever.remaining,remaining);nodes.get('overlay').fire('click',{target:new Node('',{action:'resume'})});
+  // Steering and the accelerator can be held by independent fingers.
+  nodes.get('dpad').fire('pointerdown',{pointerId:31,target:dirs.find(n=>n.dataset.dir==='left')});nodes.get('rush').fire('pointerdown',{pointerId:32});tick(10);assert.equal(nodes.get('dpad').capture,31);assert.equal(nodes.get('rush').capture,32);nodes.get('dpad').fire('pointercancel',{pointerId:31});nodes.get('rush').fire('pointerup',{pointerId:32});assert.ok(!nodes.get('rush').classList.contains('held'));
+  nodes.get('pulse').fire('click');tick(1);windowEvents.get('blur')();const pausedArcade=arcade();assert.ok(pausedArcade.game.state.stats.casts>0);tick(50,100);assert.equal(arcade().fever.remaining,pausedArcade.fever.remaining);nodes.get('overlay').fire('click',{target:new Node('',{action:'resume'})});
+  tick(920,100);assert.match(nodes.get('overlay').innerHTML,/掘りきった/);assert.match(nodes.get('overlay').innerHTML,/同じ鉱脈でもう一度/);assert.equal(storage.has('relic-delve-fever-run-v1'),false);
+  const record=JSON.parse(storage.get('relic-delve-fever-best-v1'));assert.ok(record.score>0);assert.equal(record.runs,1);tick(30,100);assert.equal(JSON.parse(storage.get('relic-delve-fever-best-v1')).runs,1);
+  assert.equal(storage.get('drill-delve-run-v3'),expeditionRecord);assert.equal(storage.get('drill-delve-meta-v1'),campRecord);
+  nodes.get('overlay').fire('click',{target:new Node('',{action:'fever-retry'})});assert.equal(arcade().game.state.seed,pausedArcade.game.state.seed);assert.equal(arcade().fever.remaining,90);assert.equal(arcade().fever.score,0);
+  nodes.get('pause').fire('click');nodes.get('overlay').fire('click',{target:new Node('',{action:'home'})});nodes.get('overlay').fire('click',{target:new Node('',{mode:'expedition'})});assert.match(nodes.get('overlay').innerHTML,/data-clock=/);nodes.get('overlay').fire('click',{target:new Node('',{action:'continue'})});assert.ok(!nodes.get('game-shell').classList.contains('fever-mode'));assert.equal(state().clockMode,'turn');
+
 });

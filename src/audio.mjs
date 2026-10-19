@@ -10,7 +10,7 @@ export class Sound {
     if(type==='split')this.note(400,t,.12,'sine',.06,180);
     if(type==='cast'){this.note([480,110,850,660][data.element]||440,t,.22,'triangle',.15,200);this.noise(.08,.08,2100);}
     if(type==='dig'){if(t-this.lastDig<.065)return;this.lastDig=t;this.noise(.055,.15,2300);this.note(210+Math.random()*70,t,.055,'triangle',.13,-100);}
-    if(type==='chain'){[0,4,7,12].slice(0,data.count>10?4:3).forEach((n,i)=>this.note(440*2**(n/12),t+i*.05,.17,'sine',.15));}
+    if(type==='chain'){const base=440*2**(Math.min(5,Math.floor((data.combo||0)/8))/12);[0,4,7,12].slice(0,data.count>10?4:3).forEach((n,i)=>this.note(base*2**(n/12),t+i*.045,.17,'sine',.13));}
     if(type==='air'||type==='heal'){[540,810,1080].forEach((f,i)=>this.note(f,t+i*.07,.18,'sine',.11));}
     if(type==='gold'||type==='buy')this.note(1200,t,.16,'triangle',.13,220);
     if(type==='stone'||type==='land')this.noise(.08,.12,600);
@@ -23,8 +23,12 @@ export class Sound {
     if(type==='bossDead'){this.noise(.6,.26,800);[130,196,262,330,392,524].forEach((f,i)=>this.note(f,t+i*.1,.5,'triangle',.15));}
     if(type==='bossAttack')this.note(90,t,.25,'sawtooth',.1,-50);
     if(type==='finish'){(data.win?[262,330,392,524]:[262,247,220,130]).forEach((f,i)=>this.note(f,t+i*.2,.5,'triangle',.13));}
+    if(type==='fever'){[0,4,7,12,16,19].forEach((n,i)=>this.note(330*2**(n/12),t+i*.065,.25,'triangle',.1));this.note(82,t,.35,'sine',.17);}
+    if(type==='finale'){[392,524,660,784].forEach((f,i)=>this.note(f,t+i*.09,.28,'triangle',.1));}
+    if(type==='feverFinish'){[262,330,392,524,660,784].forEach((f,i)=>this.note(f,t+i*.1,.4,'triangle',.1));}
+    if(type==='bump'){this.note(180,t,.09,'triangle',.08,-40);}
     if(type==='click')this.note(540,t,.055,'sine',.10);
   }
-  update(active,stage=0){if(!this.ctx||!this.enabled||!active||!this.music){if(this.ctx)this.nextNote=this.ctx.currentTime;return;}const now=this.ctx.currentTime;if(this.nextNote<now-.2)this.nextNote=now;const scale=[0,3,7,10,12,7,3,5],base=[130.81,146.83,110,123.47,130.81,164.81][stage];while(this.nextNote<now+.12){const i=this.beat++%32,n=scale[Math.floor(i/2)%8];if(i%2===0)this.note(base*2**(n/12),this.nextNote,.45,'sine',.035);if(i%8===0)this.note(base/2,this.nextNote,.8,'triangle',.055);if(i%4===2)this.note(base*4*2**(scale[(i*3)%8]/12),this.nextNote,.12,'sine',.022);this.nextNote+=.19;}}
+  update(active,stage=0,arcade=null){if(!this.ctx||!this.enabled||!active||!this.music){if(this.ctx)this.nextNote=this.ctx.currentTime;return;}const now=this.ctx.currentTime;if(this.nextNote<now-.2)this.nextNote=now;const scale=[0,3,7,10,12,7,3,5],base=[130.81,146.83,110,123.47,130.81,164.81][stage];while(this.nextNote<now+.12){const i=this.beat++%32,n=scale[Math.floor(i/2)%8];if(arcade?.arcade){const major=[0,4,7,12,7,4,9,7],note=major[i%8],b=arcade.fever?164.81:130.81;this.note(b*2**(note/12),this.nextNote,.15,'triangle',arcade.fever?.035:.025);if(i%4===0){this.note(b/2,this.nextNote,.18,'sine',.075);this.note(b*2,this.nextNote,.045,'triangle',.022);}if(arcade.fever&&i%2===1)this.note(b*4*2**(major[(i+3)%8]/12),this.nextNote,.08,'sine',.025);this.nextNote+=arcade.fever?.1:.125;continue;}if(i%2===0)this.note(base*2**(n/12),this.nextNote,.45,'sine',.035);if(i%8===0)this.note(base/2,this.nextNote,.8,'triangle',.055);if(i%4===2)this.note(base*4*2**(scale[(i*3)%8]/12),this.nextNote,.12,'sine',.022);this.nextNote+=.19;}}
   toggle(){this.enabled=!this.enabled;if(this.master)this.master.gain.value=this.enabled?.3:0;if(this.enabled)this.unlock();return this.enabled;}
 }

@@ -3,6 +3,7 @@ import {TerrainAtlas,drawRuins} from './world-art.mjs';
 import {drawMiner,drawCommonEnemy,drawMoth,drawGuardian} from './actor-art.mjs';
 import {drawDebris,drawEffects} from './effects-art.mjs';
 import {drawFixture,drawGate} from './prop-art.mjs';
+import {drawFeverDrill,drawFeverGems} from './fever-art.mjs';
 import {COLS,ROWS,PALETTE} from './engine.mjs';
 import {forecastFall,canPush,SETPIECES} from './tactics.mjs';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
@@ -16,7 +17,7 @@ export class Renderer{
     if(this.lastStage!==g.roomNumber){this.cam=target;this.lastStage=g.roomNumber;}this.cam+=(target-this.cam)*Math.min(1,dt*9);
     drawRuins(c,w,h,s,this.cam,g.stage,this.clock);c.save();if(g.shake)c.translate(Math.sin(this.clock*111)*g.shake*8,Math.cos(this.clock*131)*g.shake*7);c.save();c.translate(this.left,-this.cam*s);
     this.floor(g);const start=Math.max(0,Math.floor(this.cam)-1),end=Math.min(ROWS,Math.ceil(this.cam+visible)+1);
-    if(!home)this.predictions(g,start,end);
+    if(!home&&!g.arcade)this.predictions(g,start,end);
     for(const f of g.fluids)this.fluid(f,s);
     for(let y=start;y<end;y++)for(let x=0;x<COLS;x++)if(g.grid[y][x])this.tile(x,y,g.grid[y][x],s,false,g);
     if(!home)this.setupMarks(g,start,end);
@@ -36,6 +37,7 @@ export class Renderer{
       if(e.objective||e.type==='hunter'){c.fillStyle=e.type==='hunter'?'#ffbc96':'#f2d99a';c.font=`700 ${s*.36}px sans-serif`;c.textAlign='center';c.fillText(e.type==='hunter'?'!':'◇',(e.rx+.5)*s,(e.ry-.02)*s);}}
     drawDebris(c,s,g.particles);
     this.miner(g);
+    if(g.arcade){drawFeverDrill(c,s,g);drawFeverGems(c,s,g);}
     drawEffects(c,s,g.fx,this.clock);
     if(g.pulseFx){const f=g.pulseFx,t=1-f.life/.4;c.globalAlpha=(1-t)*.7;c.strokeStyle='#b1f0d3';c.lineWidth=2;c.beginPath();c.arc(f.x*s,f.y*s,s*(.3+t*(f.radius||2)),0,7);c.stroke();c.globalAlpha=1;}
     for(const e of g.enemies)if(e.intent?.y>=start&&e.intent?.y<=end)drawTargetReticle(c,s,e,g.turnBased);
@@ -44,7 +46,7 @@ export class Renderer{
     const shade=c.createLinearGradient(0,0,0,h);shade.addColorStop(0,'#050b132c');shade.addColorStop(.15,'#050b1300');shade.addColorStop(.85,'#050b1300');shade.addColorStop(1,'#050b1355');c.fillStyle=shade;c.fillRect(0,0,w,h);
     if(g.flash){const edge=c.createRadialGradient(w/2,h/2,h*.13,w/2,h/2,Math.max(w,h)*.68);edge.addColorStop(0,'#ff696900');edge.addColorStop(1,`rgba(255,101,109,${Math.min(.65,g.flash*1.5)})`);c.fillStyle=edge;c.fillRect(0,0,w,h);}
     if(g.messageTimer>0&&!home){const text=g.message,fontsize=Math.min(11,w*.028);c.font=`600 ${fontsize}px sans-serif`;c.textAlign='center';const width=Math.min(w-20,c.measureText(text).width+24);rr(c,(w-width)/2,8,width,28,12,'#13242ae8','#bdd2ac38');c.fillStyle='#e1e8cc';c.fillText(text,w/2,26,w-36);}
-    if(!g.started&&!home){rr(c,w/2-119,h-44,238,28,14,'#122329e8','#c3dcc62a');c.fillStyle='#c3d9cf';c.font='600 10px sans-serif';c.textAlign='center';c.fillText(g.turnBased?'方向タップで1手 / 待つで周囲を進める':'▼ 下へ掘る / 掘る長押しで高速 / 上は小ジャンプ',w/2,h-26);}
+    if(!g.started&&!home){rr(c,w/2-119,h-44,238,28,14,'#122329e8','#c3dcc62a');c.fillStyle='#c3d9cf';c.font='600 10px sans-serif';c.textAlign='center';c.fillText(g.arcade?'左右かGOでスタート / 下へは自動で掘削':g.turnBased?'方向タップで1手 / 待つで周囲を進める':'▼ 下へ掘る / 掘る長押しで高速 / 上は小ジャンプ',w/2,h-26);}
     c.restore();
   }
   predictions(g,start,end){
@@ -99,5 +101,5 @@ export class Renderer{
   miner(g){drawMiner(this.c,this.cell,g.player,this.clock);}
   enemy(e,g){if(drawSpecialEnemy(this.c,this.cell,e,g,this.clock))return;if(e.type==='moth')drawMoth(this.c,this.cell,e,this.clock);else drawCommonEnemy(this.c,this.cell,e,g,this.clock);}
   boss(g){drawGuardian(this.c,this.cell,g.boss,g.stage,this.clock);}
-  gate(g){const e=g.exit,s=this.cell;if(e.y<this.cam-3||e.y>this.cam+this.h/s+3)return;drawGate(this.c,s,e,g.biome,g.roomNumber===18,this.clock);}
+  gate(g){if(g.arcade)return;const e=g.exit,s=this.cell;if(e.y<this.cam-3||e.y>this.cam+this.h/s+3)return;drawGate(this.c,s,e,g.biome,g.roomNumber===18,this.clock);}
 }

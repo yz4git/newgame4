@@ -48,6 +48,14 @@ Six distinct deep backgrounds replace the flat checkerboard: a root-covered sanc
 
 Terrain textures are painted once into 96px sprites and cached for the current region; visible veins, damaged stone, push arrows, ice expiry and warnings remain dynamic. World artwork uses the simulation clock in turn mode, so thinking does not animate enemies, hazards or terrain. Rendering never consumes game RNG or changes saves. All art is local Canvas code and is precached by the PWA, with no external image downloads or runtime packages. The instrument surfaces in the HUD and controls match the brass/teal palette without moving touch targets.
 
+## Fever Mining (v3.0)
+
+The title's **採掘フィーバー** tab opens a separate 90-second arcade. The first left/right input, GO/boost or blast starts the timer. Downward drilling is automatic; left/right taps or holds steer through veins, the large button accelerates drilling, and the small button gives a free blast every 3.5 seconds. Connected minerals and landing cascades keep their normal geometry. Every creature takes one hit; defeat starts a bounded rolling blast or horizontal shockwave that can chain through other creatures, barrels and seams. Gems fly to the explorer while the score is credited once.
+
+Combos raise the multiplier to 8×. Mining and kills fill the fever meter, automatically granting ten seconds of three-column drilling and a further 3× score multiplier. Fever does not refill itself while active. Bumps halve the current combo and lower the meter a little, then grant recovery protection; HP stays full and there is no early death. At 20 seconds ordinary drilling gains a second column, at 45 seconds enemy bursts grow, and the final 12 seconds bring a giant amber seam. Regions cycle with fresh seeded terrain and no route, camp or equipment screens. The 90 active seconds end in a score/rank screen with same-seed replay and a fresh-seed option.
+
+Pause, the guide, title navigation and backgrounding stop the arcade clock. Its versioned save, personal best and mode preference use independent browser keys; the expedition record, clock selection and permanent camp progression are retained. Arcade restore validates the normal world plus countdown, meter, sector, input timers and pending blast queue, preserving the RNG and the complete future. There are no external images, audio downloads or additional runtime packages. The PWA precaches the new rules, UI and art modules.
+
 ## Controls
 
 - Touch: hold a direction to move and mine. Hold **掘る** for fast drilling. Up performs a one-cell hop from supported ground and mines overhead rock. Independent pointer capture supports movement plus drilling together.

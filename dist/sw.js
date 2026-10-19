@@ -1,5 +1,5 @@
-const CACHE='drill-delve-2.7.0';
-const FILES=['./','./index.html','./style.css?v=2.7.0','./src/app.mjs?v=2.7.0','./src/turn-input.mjs','./src/engine.mjs','./src/tactics.mjs','./src/enemies.mjs','./src/boss.mjs','./src/enemy-art.mjs','./src/render.mjs','./src/art-core.mjs','./src/world-art.mjs','./src/actor-art.mjs','./src/prop-art.mjs','./src/effects-art.mjs','./src/audio.mjs','./icon.svg','./icon.png','./manifest.webmanifest'];
+const CACHE='drill-delve-3.0.0';
+const FILES=['./','./index.html','./style.css?v=3.0.0','./src/app.mjs?v=3.0.0','./src/turn-input.mjs','./src/engine.mjs','./src/tactics.mjs','./src/enemies.mjs','./src/boss.mjs','./src/enemy-art.mjs','./src/render.mjs','./src/art-core.mjs','./src/world-art.mjs','./src/actor-art.mjs','./src/prop-art.mjs','./src/effects-art.mjs','./src/audio.mjs','./src/fever.mjs','./src/fever-ui.mjs','./src/fever-art.mjs','./icon.svg','./icon.png','./manifest.webmanifest'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('drill-delve-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
 // Network first makes published updates visible immediately; cache is the offline fallback.
