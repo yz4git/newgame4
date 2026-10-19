@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Game} from '../src/engine.mjs';
+import {FeverGame} from '../src/fever.mjs';
 import {Renderer} from '../src/render.mjs';
 
 function recordingContext(){
@@ -31,4 +32,14 @@ test('turn-mode artwork stays still while the same decision is displayed',()=>{
   const g=new Game(9,null,'turn');for(let i=0;i<12;i++)g.takeTurn({dir:'down'});
   const {ctx,calls}=recordingContext(),r=new Renderer(ctx,{surfaceFactory:()=>null});r.resize(529,272);
   r.draw(g);const first=calls.slice();calls.length=0;r.draw(g,.5);assert.deepEqual(calls,first);
+});
+
+test('casual artwork can paint every arcade palette without changing the run or RNG',()=>{
+  const {ctx,depth}=recordingContext(),r=new Renderer(ctx,{surfaceFactory:()=>null});r.resize(529,272);
+  for(let stage=0;stage<6;stage++){
+    const g=new FeverGame(42);g.sector=stage;g.loadArcadeFloor();
+    for(let i=0;i<120;i++)g.step(1/60,{rush:true,dir:'right',pulse:i===60});g.gainFever(100);
+    const before=JSON.stringify(g),rng=g.rng.state();freeze(g);r.draw(g);
+    assert.equal(JSON.stringify(g),before);assert.equal(g.rng.state(),rng);assert.equal(depth(),0);
+  }
 });

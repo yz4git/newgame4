@@ -56,6 +56,12 @@ Combos raise the multiplier to 8×. Mining and kills fill the fever meter, autom
 
 Pause, the guide, title navigation and backgrounding stop the arcade clock. Its versioned save, personal best and mode preference use independent browser keys; the expedition record, clock selection and permanent camp progression are retained. Arcade restore validates the normal world plus countdown, meter, sector, input timers and pending blast queue, preserving the RNG and the complete future. There are no external images, audio downloads or additional runtime packages. The PWA precaches the new rules, UI and art modules.
 
+## Casual arcade art (v3.1)
+
+Fever Mining has its own sunny visual theme: mint foliage, honey sandstone, soda bubbles, berry mushrooms, caramel machinery and a pastel star mine. Rounded clay tiles hold one large glossy jewel; the four mineral colors also have distinct cut shapes. The explorer has an oversized orange helmet, smiling face and chunky toy drill. Every arcade creature is redrawn with rounded silhouettes and expressions. Pickups, star-shaped pops, confetti, comic combo captions and the three-column tool share the same palette. Effects are painted behind the explorer so a chain reaction does not hide the controls' target.
+
+The title, guide, pause, dashboard, result card and mobile controls use cream, turquoise and warm orange surfaces. The normal expedition keeps its existing artwork and UI. Both terrain styles use separate bounded 96px sprite atlases; the new art uses no external bitmap downloads and does not change game rules, saves, collision or score. Render checks compare the normal expedition against v3.0 pixel for pixel, and verify that the casual renderer does not touch the world or simulation RNG.
+
 ## Controls
 
 - Touch: hold a direction to move and mine. Hold **掘る** for fast drilling. Up performs a one-cell hop from supported ground and mines overhead rock. Independent pointer capture supports movement plus drilling together.

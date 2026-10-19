@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#0c1522">
+  <meta id="theme-color" name="theme-color" content="#0c1522">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="掘る、崩れる、連鎖する。足場と落盤を読みながら深く潜り、鉱脈から得た属性の共鳴で掘り方を変える採掘ローグライト。">
@@ -11,7 +11,7 @@
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./icon.png">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./style.css?v=3.0.0">
+  <link rel="stylesheet" href="./style.css?v=3.1.0">
 </head>
 <body>
   <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
@@ -38,7 +38,7 @@
     </aside>
     <main class="play-shell" id="game-shell">
       <header class="hud">
-        <div class="topline"><div class="brand"><svg><use href="#i-gem"/></svg><span>RELIC <b>DELVE</b></span><i>v3.0.0</i></div><div class="header-actions"><button id="sound" class="icon-button" aria-label="サウンドを切り替える" aria-pressed="true"><svg><use href="#i-sound"/></svg></button><button id="pause" class="icon-button" aria-label="一時停止"><svg><use href="#i-pause"/></svg></button></div></div>
+        <div class="topline"><div class="brand"><svg><use href="#i-gem"/></svg><span>RELIC <b>DELVE</b></span><i>v3.1.0</i></div><div class="header-actions"><button id="sound" class="icon-button" aria-label="サウンドを切り替える" aria-pressed="true"><svg><use href="#i-sound"/></svg></button><button id="pause" class="icon-button" aria-label="一時停止"><svg><use href="#i-pause"/></svg></button></div></div>
         <div id="fever-hud" class="fever-hud" hidden>
           <div class="fever-scoreline"><div><small>FEVER MINING / SCORE</small><strong id="fever-score">0</strong></div><div class="fever-clock"><small>TIME LEFT</small><strong id="fever-time">90.0</strong><span>s</span></div></div>
           <div class="fever-runline"><span id="fever-combo">0 COMBO · ×1</span><span>BEST <b id="fever-best">0</b></span></div>
@@ -59,6 +59,6 @@
     <aside class="field-panel right-panel"><div class="field-kicker">FIELD NOTES</div><h3>遺跡の心得</h3><ol><li><b>足場を崩して潜る</b><p>同色の鉱脈をまとめて砕く。左右で次の連鎖へ進路をつなぐ。</p></li><li><b>着地が次の連鎖に</b><p>支えを失った塊が落下。同色がつながれば追加の連鎖になる。</p></li><li><b>共鳴で掘り方を変える</b><p>落盤凍結、前方爆破、回復、連鎖雷。集めた鉱脈が切り札になる。</p></li></ol><div class="key-notes"><span>方向キー / WASD</span> 移動・掘削<br><span>SPACE</span> 高速掘削　<span>1–4</span> 属性選択<br><span>X</span> 共鳴　<span>C</span> 回復<br><span>ESC</span> 一時停止</div><button id="guide-side" class="text-button"><svg><use href="#i-book"/></svg>フィールドガイド</button></aside>
   </div>
   <noscript>このゲームを遊ぶにはJavaScriptを有効にしてください。</noscript>
-  <script type="module" src="./src/app.mjs?v=3.0.0"></script>
+  <script type="module" src="./src/app.mjs?v=3.1.0"></script>
 </body>
 </html>

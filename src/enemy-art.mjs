@@ -79,9 +79,9 @@ export function drawSpecialEnemy(c,s,e,g,clock){
   }
   healthBar(c,e,-.59);c.restore();return true;
 }
-export function drawEnemyIntent(c,s,e,g,clock){
+export function drawEnemyIntent(c,s,e,g,clock,colors=null){
   const a=e.intent;if(!a)return;c.save();c.lineWidth=1;
-  const color=a.kind==='spit'?'#d2eca0':a.kind==='bomb'?'#ffb097':'#ffd295';c.strokeStyle=color;c.fillStyle=color+'20';
+  const color=colors?.[a.kind]||(a.kind==='spit'?'#d2eca0':a.kind==='bomb'?'#ffb097':'#ffd295');c.strokeStyle=color;c.fillStyle=color+'20';
   if(a.kind==='bite'){
     c.fillRect(a.x*s,a.y*s,s,s);c.strokeRect(a.x*s+2,a.y*s+2,s-4,s-4);
     polygon(c,[[a.x*s+s*.22,a.y*s+s*.22],[a.x*s+s*.78,a.y*s+s*.78]],null,color);

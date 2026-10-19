@@ -82,18 +82,18 @@ function surface(width,height){
   return null;
 }
 export class TerrainAtlas{
-  constructor(factory=surface){this.factory=factory;this.stage=-1;this.cache=new Map();this.variants=new WeakMap();}
+  constructor(factory=surface,painter=paintTile){this.factory=factory;this.painter=painter;this.stage=-1;this.cache=new Map();this.variants=new WeakMap();}
   draw(c,x,y,t,s,biome,stage){
     if(this.stage!==stage){this.stage=stage;this.cache.clear();this.variants=new WeakMap();}
     if(!this.variants.has(t))this.variants.set(t,(Math.round(x)*7+Math.round(y)*17)%3);
     const variant=this.variants.get(t),key=(t.ice?'ice':t.c)+'/'+variant;
     if(!this.cache.has(key)){
-      let canvas=null;try{canvas=this.factory(96,96);const ctx=canvas?.getContext('2d');if(ctx){ctx.scale(96,96);paintTile(ctx,t,biome,variant);}else canvas=null;}catch{canvas=null;}
+      let canvas=null;try{canvas=this.factory(96,96);const ctx=canvas?.getContext('2d');if(ctx){ctx.scale(96,96);this.painter(ctx,t,biome,variant);}else canvas=null;}catch{canvas=null;}
       this.cache.set(key,canvas);
     }
     const image=this.cache.get(key);
     if(image)c.drawImage(image,x*s,y*s,s,s);
-    else{c.save();c.translate(x*s,y*s);c.scale(s,s);paintTile(c,t,biome,variant);c.restore();}
+    else{c.save();c.translate(x*s,y*s);c.scale(s,s);this.painter(c,t,biome,variant);c.restore();}
   }
 }
 function paintTile(c,t,b,v){

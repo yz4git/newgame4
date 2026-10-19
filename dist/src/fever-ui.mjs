@@ -8,10 +8,11 @@ export function feverResult(g,record,newBest){const f=g.fever;return `<div class
 export function feverHud($,g,record,home){
   const active=!home&&g.arcade==='fever';$('fever-hud').hidden=!active;$('game-shell').classList.toggle('fever-mode',active);$('layout').classList.toggle('arcade-layout',active);$('game-shell').classList.toggle('is-fever',active&&g.fever.active>0);
   $('control-hint').innerHTML=active?'左右で進路<br><span>下へは自動</span>':'移動・掘削<br><span>長押しで連続</span>';
+  if(!home)$('theme-color').setAttribute('content',active?'#fff4db':'#0c1522');
   if(!active)return;const f=g.fever;
   $('fever-score').textContent=fmt(f.score);$('fever-best').textContent=fmt(Math.max(record.score,f.score));$('fever-time').textContent=Math.max(0,f.remaining).toFixed(1);$('fever-time').classList.toggle('urgent',f.remaining<=12);
   $('fever-combo').textContent=`${g.combo} COMBO · ×${g.multiplier}`;$('fever-fill').style.width=(f.active>0?f.active/10*100:f.meter)+'%';$('fever-gauge-label').textContent=f.active>0?`FEVER! 3列掘削 · 残り ${f.active.toFixed(1)}s`:`FEVER ${Math.floor(f.meter)}% · 連鎖と撃破でためよう`;
   $('fever-hint').textContent=!g.started?'左右かGOでスタート':f.finale?'LAST SPURT · 黄金の巨大鉱脈を狙おう':f.upgrades>=2?'2列掘削 ＋ 誘爆強化 · 長押しで加速':f.upgrades>=1?'2列掘削にパワーアップ！': '左右で鉱脈を選ぶ · 敵を倒して誘爆';
-  $('cast-name').textContent=g.started?'加速':'GO';$('cast-cost').textContent=g.started?'長押しブースト':'タップで開始';$('rush').setAttribute('aria-label',g.started?'長押しで自動掘削を加速':'採掘フィーバーを開始');$('rush').style.setProperty('--element-color',f.active>0?'#ffd189':'#a5dec2');
+  $('cast-name').textContent=g.started?'加速':'GO';$('cast-cost').textContent=g.started?'長押しブースト':'タップで開始';$('rush').setAttribute('aria-label',g.started?'長押しで自動掘削を加速':'採掘フィーバーを開始');$('rush').style.setProperty('--element-color',f.active>0?'#ffd16f':'#ffad75');
   $('pulse-text').textContent=g.player.pulseTimer>0?g.player.pulseTimer.toFixed(1)+'s':'ドカン';$('pulse').setAttribute('aria-label','無料の爆破 3.5秒ごとに使用可能');$('pulse-cooldown').style.height=Math.min(100,g.player.pulseTimer/3.5*100)+'%';
 }
