@@ -26,6 +26,9 @@ export class Sound {
     if(type==='fever'){[0,4,7,12,16,19].forEach((n,i)=>this.note(330*2**(n/12),t+i*.065,.25,'triangle',.1));this.note(82,t,.35,'sine',.17);}
     if(type==='finale'){[392,524,660,784].forEach((f,i)=>this.note(f,t+i*.09,.28,'triangle',.1));}
     if(type==='feverFinish'){[262,330,392,524,660,784].forEach((f,i)=>this.note(f,t+i*.1,.4,'triangle',.1));}
+    if(type==='comboMilestone'){[0,7,12,16].forEach((n,i)=>this.note(524*2**(n/12),t+i*.055,.19,'sine',.065));}
+    if(type==='feverTick'){this.note(660+(3-(data.count||3))*110,t,.09,'triangle',.075);}
+    if(type==='feverOut'){[784,660,524].forEach((f,i)=>this.note(f,t+i*.07,.18,'sine',.065));}
     if(type==='bump'){this.note(180,t,.09,'triangle',.08,-40);}
     if(type==='click')this.note(540,t,.055,'sine',.10);
   }

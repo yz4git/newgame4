@@ -3,6 +3,7 @@ import {ENEMY_TYPES} from './enemies.mjs';
 import {Game,BIOMES,EQUIPMENT,UPGRADES,ELEMENTS,ROOM_TYPES,normalizeMeta,talentCost,VERSION} from './engine.mjs';
 import {Renderer} from './render.mjs';
 import {Sound} from './audio.mjs';
+import {FeverShow} from './fever-show.mjs';
 import {FeverGame} from './fever.mjs';
 import {feverCard,feverPause,feverGuide,feverResult,feverHud} from './fever-ui.mjs';
 const $=id=>document.getElementById(id),keys={meta:'drill-delve-meta-v1',run:'drill-delve-run-v3',migration:'drill-delve-v3-migrated',sound:'drill-delve-sound-v1',clock:'drill-delve-clock-v1',play:'relic-delve-play-mode-v1',feverRun:'relic-delve-fever-run-v1',feverBest:'relic-delve-fever-best-v1'};
@@ -11,6 +12,7 @@ function write(key,value){try{localStorage.setItem(key,JSON.stringify(value));re
 function erase(key){try{localStorage.removeItem(key);}catch{}}
 let meta=normalizeMeta(read(keys.meta)),game=new Game(2177,meta),home=true,modalMode='',guideBack='home',saved=read(keys.run)||(!read(keys.migration)?read('drill-delve-run-v2'):null),storageWarned=false;
 const canvas=$('game'),ctx=canvas.getContext('2d',{alpha:false}),renderer=new Renderer(ctx),sound=new Sound();sound.enabled=read(keys.sound)!==false;
+const feverShow=new FeverShow({reducedMotion:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false});
 let preferredPlay=read(keys.play)==='fever'?'fever':'expedition',savedFever=read(keys.feverRun),steerQueued=null,startQueued=null;
 const rawRecord=read(keys.feverBest),feverRecord={score:Math.max(0,Number(rawRecord?.score)||0),combo:Math.max(0,Number(rawRecord?.combo)||0),runs:Math.max(0,Number(rawRecord?.runs)||0)};
 const isFever=()=>game.arcade==='fever';
@@ -110,13 +112,17 @@ function frame(now){
         hud(true);
       }game.step(dt);
     }else{accumulator+=dt;while(accumulator>=1/60){game.step(1/60,input());accumulator-=1/60;}}
+    for(const cue of feverShow.update(game))sound.play(cue.type,cue);
     for(const event of game.events.splice(0)){
+      for(const cue of feverShow.receive(game,event))sound.play(cue.type,cue);
       if(event.type==='save'){if(game.turnBased)saveDue=now+250;else save();}
       else sound.play(event.type,event);
     }
     if(saveDue&&now>=saveDue)save();syncModal();
   }else accumulator=0;
-  renderer.draw(game,dt,home);sound.update(!home&&game.mode==='play'&&(!isFever()||game.started),game.stage,isFever()?{arcade:true,fever:game.fever.active>0}:null);hud();requestAnimationFrame(frame);
+  renderer.draw(game,dt,home,feverShow);
+  const fxActive=!home&&isFever();$('fever-combo').style.setProperty('--combo-pop',fxActive&&feverShow.comboBeat>game.time?'1.06':'1');$('game-shell').classList.toggle('fever-paused',fxActive&&game.mode!=='play');
+  sound.update(!home&&game.mode==='play'&&(!isFever()||game.started),game.stage,isFever()?{arcade:true,fever:game.fever.active>0}:null);hud();requestAnimationFrame(frame);
 }
 if(saved){try{Game.restore(saved,meta);}catch{saved=null;erase(keys.run);}}
 if(savedFever){try{FeverGame.restore(savedFever);}catch{savedFever=null;erase(keys.feverRun);}}

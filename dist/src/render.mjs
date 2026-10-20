@@ -3,6 +3,7 @@ import {TerrainAtlas,drawRuins} from './world-art.mjs';
 import {drawMiner,drawCommonEnemy,drawMoth,drawGuardian} from './actor-art.mjs';
 import {drawDebris,drawEffects} from './effects-art.mjs';
 import {drawFixture,drawGate} from './prop-art.mjs';
+import {drawFeverImpact,drawFeverShow} from './fever-show.mjs';
 import {drawFeverDrill,drawFeverGems} from './fever-art.mjs';
 import {drawCasualBackground,drawCasualTile,TOY_THEMES,CANDY} from './casual-world.mjs';
 import {drawCasualMiner,drawCasualEnemy} from './casual-actors.mjs';
@@ -15,7 +16,7 @@ function rr(c,x,y,w,h,r,fill,stroke){c.beginPath();c.roundRect(x,y,w,h,r);if(fil
 export class Renderer{
   constructor(ctx,options={}){this.atlas=new TerrainAtlas(options.surfaceFactory);this.casualAtlas=new TerrainAtlas(options.surfaceFactory,drawCasualTile);this.c=ctx;this.w=400;this.h=500;this.cam=0;this.clock=0;this.lastStage=-1;}
   resize(w,h){this.w=w;this.h=h;this.cell=Math.min(w/(COLS+.8),h/12.5);this.left=(w-COLS*this.cell)/2;}
-  draw(g,dt=1/60,home=false){
+  draw(g,dt=1/60,home=false,show=null){
     const c=this.c,w=this.w,h=this.h,s=this.cell;if(g.turnBased&&!home)this.clock=g.time;else this.clock+=dt;const visible=h/s,target=visible>=ROWS?-(visible-ROWS)/2:clamp(g.player.ry-visible*.48,0,ROWS-visible);
     if(this.lastStage!==g.roomNumber){this.cam=target;this.lastStage=g.roomNumber;}this.cam+=(target-this.cam)*Math.min(1,dt*9);
     if(g.arcade)drawCasualBackground(c,w,h,s,this.cam,g.stage,this.clock,g.fever.active>0);else drawRuins(c,w,h,s,this.cam,g.stage,this.clock);c.save();if(g.shake)c.translate(Math.sin(this.clock*111)*g.shake*8,Math.cos(this.clock*131)*g.shake*7);c.save();c.translate(this.left,-this.cam*s);
@@ -38,7 +39,7 @@ export class Renderer{
       if(e.frozen>0){rr(c,(e.rx+.08)*s,(e.ry+.06)*s,s*.84,s*.87,s*.15,'#b7efff22','#c8f4ff');c.fillStyle='#dbf9ff';c.font=`700 ${s*.28}px sans-serif`;c.textAlign='center';c.fillText('❄',(e.rx+.5)*s,(e.ry+.18)*s);}
       else if(e.recovery>0&&!g.arcade){c.fillStyle='#bad6c3';c.font=`700 ${s*.27}px sans-serif`;c.textAlign='center';c.fillText('OPEN',(e.rx+.5)*s,(e.ry-.02)*s);}
       if(e.objective||e.type==='hunter'){c.fillStyle=e.type==='hunter'?'#ffbc96':'#f2d99a';c.font=`700 ${s*.36}px sans-serif`;c.textAlign='center';c.fillText(e.type==='hunter'?'!':'◇',(e.rx+.5)*s,(e.ry-.02)*s);}}
-    if(g.arcade){drawCasualDebris(c,s,g.particles);drawCasualEffects(c,s,g.fx,this.clock);}else drawDebris(c,s,g.particles);
+    if(g.arcade){drawCasualDebris(c,s,g.particles);drawCasualEffects(c,s,g.fx,this.clock);drawFeverImpact(c,s,g,show);}else drawDebris(c,s,g.particles);
     this.miner(g);
     if(g.arcade){drawFeverDrill(c,s,g);drawFeverGems(c,s,g);}
     if(!g.arcade)drawEffects(c,s,g.fx,this.clock);
@@ -48,7 +49,8 @@ export class Renderer{
     if(g.arcade)drawCasualCaptions(c,s,g.texts);else for(const f of g.texts){c.globalAlpha=Math.min(1,f.life*3);c.font=`800 ${Math.max(10,s*.36)}px sans-serif`;c.textAlign='center';c.lineWidth=3;c.strokeStyle='#142326';c.strokeText(f.s,f.x*s,f.y*s);c.fillStyle=f.color;c.fillText(f.s,f.x*s,f.y*s);}c.globalAlpha=1;c.restore();
     const shade=c.createLinearGradient(0,0,0,h);shade.addColorStop(0,g.arcade?'#e5f5ec00':'#050b132c');shade.addColorStop(.15,'#050b1300');shade.addColorStop(.85,'#050b1300');shade.addColorStop(1,g.arcade?'#315c6c12':'#050b1355');c.fillStyle=shade;c.fillRect(0,0,w,h);
     if(g.flash){const edge=c.createRadialGradient(w/2,h/2,h*.13,w/2,h/2,Math.max(w,h)*.68);edge.addColorStop(0,'#ff696900');edge.addColorStop(1,`rgba(255,101,109,${Math.min(.65,g.flash*1.5)})`);c.fillStyle=edge;c.fillRect(0,0,w,h);}
-    if(g.messageTimer>0&&!home){const text=g.message,fontsize=Math.min(11,w*.028);c.font=`600 ${fontsize}px sans-serif`;c.textAlign='center';const width=Math.min(w-20,c.measureText(text).width+24);rr(c,(w-width)/2,8,width,28,12,g.arcade?'#fff4d8ee':'#13242ae8',g.arcade?'#6ca4a04f':'#bdd2ac38');c.fillStyle=g.arcade?'#3c6573':'#e1e8cc';c.fillText(text,w/2,26,w-36);}
+    if(g.arcade&&!home)drawFeverShow(c,w,h,g,show);
+    if(g.messageTimer>0&&!home&&!(g.arcade&&show?.game===g&&(show.banner||g.fever.active>0||g.fever.finale))){const text=g.message,fontsize=Math.min(11,w*.028);c.font=`600 ${fontsize}px sans-serif`;c.textAlign='center';const width=Math.min(w-20,c.measureText(text).width+24);rr(c,(w-width)/2,8,width,28,12,g.arcade?'#fff4d8ee':'#13242ae8',g.arcade?'#6ca4a04f':'#bdd2ac38');c.fillStyle=g.arcade?'#3c6573':'#e1e8cc';c.fillText(text,w/2,26,w-36);}
     if(!g.started&&!home){rr(c,w/2-119,h-44,238,28,14,g.arcade?'#fff5dbef':'#122329e8',g.arcade?'#7dafab77':'#c3dcc62a');c.fillStyle=g.arcade?'#416775':'#c3d9cf';c.font='600 10px sans-serif';c.textAlign='center';c.fillText(g.arcade?'左右かGOでスタート / 下へは自動で掘削':g.turnBased?'方向タップで1手 / 待つで周囲を進める':'▼ 下へ掘る / 掘る長押しで高速 / 上は小ジャンプ',w/2,h-26);}
     c.restore();
   }

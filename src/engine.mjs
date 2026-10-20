@@ -1,7 +1,7 @@
 import {ENEMY_TYPES,SPECIAL_ENEMIES,specialEnemyStep,advanceEnemyIntent,specialEnemyDeath,spitBlocked,enemyCanEnter,noticesPlayer} from './enemies.mjs';
 import {prepareBoss,bossDamage,breakBossSeal,updateBoss} from './boss.mjs';
 import {TACTICAL_UPGRADES,populateSetpieces,pushObject,leaveIce,updateIce,landingShock} from './tactics.mjs';
-export const VERSION='3.1.0';
+export const VERSION='3.2.0';
 export const TURN_TIME=1;
 export const COLS=13, ROWS=76;
 export const PALETTE=['#75dba7','#f3ad70','#7ac9f1','#b5a0f3'];

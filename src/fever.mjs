@@ -62,10 +62,10 @@ export class FeverGame extends Game{
   }
   clearCells(cells,{chain=true,rewards=true,source='dig'}={}){
     if(!this.fever)return super.clearCells(cells,{chain,rewards,source});
-    const removed=[],bombs=[];let minerals=0,treasure=0;
+    const removed=[],bombs=[];let minerals=0,treasure=0,gemColor=-1;
     for(const {x,y}of cells){
       const t=this.at(x,y);if(!t||t.c===9||!inside(x,y))continue;this.grid[y][x]=null;removed.push({x,y});this.stats.blocks++;
-      if(t.c<4)minerals++;if(t.c>=5&&t.c<=8)treasure+=t.c===8?240:t.c===6?100:60;if(t.c===12)bombs.push({x,y});
+      if(t.c<4){minerals++;gemColor=t.c;}if(t.c>=5&&t.c<=8)treasure+=t.c===8?240:t.c===6?100:60;if(t.c===12)bombs.push({x,y});
       if(removed.length<40)this.burst(x,y,PALETTE[t.c]||this.biome.rock,cells.length>12?2:4);
       if(this.gems.length<55&&(t.c<4||t.c===6))this.gems.push({x:x+.5,y:y+.5,life:.65,color:PALETTE[t.c]||'#ffe1a0'});
     }
@@ -73,7 +73,7 @@ export class FeverGame extends Game{
     if(chain&&minerals>=3){
       this.combo=this.comboTimer>0?Math.min(999,this.combo+1):1;this.comboTimer=4.5;
       this.stats.chains++;this.stats.maxChain=Math.max(this.stats.maxChain,minerals);this.fever.maxCombo=Math.max(this.fever.maxCombo,this.combo);
-      this.emit('chain',{count:minerals,combo:this.combo});this.gainFever(Math.min(6,1+minerals*.08));this.shake=Math.max(this.shake,.045);
+      this.emit('chain',{count:minerals,combo:this.combo,x:removed[0].x+.5,y:removed[0].y+.5,color:gemColor});this.gainFever(Math.min(6,1+minerals*.08));this.shake=Math.max(this.shake,.045);
       if(!treasure&&(minerals>=6||source==='landing'))this.caption(`${minerals} BREAK · ×${this.multiplier}`,removed[0].x,removed[0].y,'#ffe3a3');
     }
     if(rewards)this.addScore(removed.length*10+minerals*5+treasure+(source==='landing'?minerals*15:0));
@@ -105,7 +105,7 @@ export class FeverGame extends Game{
     if(!this.enemies.includes(e)||power<=0)return;
     this.enemies.splice(this.enemies.indexOf(e),1);this.stats.kills++;
     if(['rock','barrel','blast','shock','enemyRush','enemySpit'].includes(source))this.stats.terrainKills++;
-    this.addScore(180);this.gainFever(2);this.burst(e.x,e.y,'#ffe0aa',8);this.emit('kill');
+    this.addScore(180);this.gainFever(2);this.burst(e.x,e.y,'#ffe0aa',8);this.emit('kill',{x:e.x+.5,y:e.y+.5});
     const shock=['rusher','burrower'].includes(e.type),radius=this.fever.upgrades>=2?2:1;
     this.queueBlast(e.x,e.y,shock?3:e.type==='bomber'?2:radius,shock?'shock':'burst');
   }
