@@ -3,6 +3,7 @@ import {TerrainAtlas,drawRuins} from './world-art.mjs';
 import {drawMiner,drawCommonEnemy,drawMoth,drawGuardian} from './actor-art.mjs';
 import {drawDebris,drawEffects} from './effects-art.mjs';
 import {drawFixture,drawGate} from './prop-art.mjs';
+import {drawFeverAtmosphere,drawFeverJuice,drawFeverReadouts} from './fever-juice.mjs';
 import {drawFeverImpact,drawFeverShow} from './fever-show.mjs';
 import {drawFeverDrill,drawFeverGems} from './fever-art.mjs';
 import {drawCasualBackground,drawCasualTile,TOY_THEMES,CANDY} from './casual-world.mjs';
@@ -19,7 +20,9 @@ export class Renderer{
   draw(g,dt=1/60,home=false,show=null){
     const c=this.c,w=this.w,h=this.h,s=this.cell;if(g.turnBased&&!home)this.clock=g.time;else this.clock+=dt;const visible=h/s,target=visible>=ROWS?-(visible-ROWS)/2:clamp(g.player.ry-visible*.48,0,ROWS-visible);
     if(this.lastStage!==g.roomNumber){this.cam=target;this.lastStage=g.roomNumber;}this.cam+=(target-this.cam)*Math.min(1,dt*9);
-    if(g.arcade)drawCasualBackground(c,w,h,s,this.cam,g.stage,this.clock,g.fever.active>0);else drawRuins(c,w,h,s,this.cam,g.stage,this.clock);c.save();if(g.shake)c.translate(Math.sin(this.clock*111)*g.shake*8,Math.cos(this.clock*131)*g.shake*7);c.save();c.translate(this.left,-this.cam*s);
+    if(g.arcade)drawCasualBackground(c,w,h,s,this.cam,g.stage,this.clock,g.fever.active>0);else drawRuins(c,w,h,s,this.cam,g.stage,this.clock);if(g.arcade&&!home)drawFeverAtmosphere(c,w,h,g,show);c.save();
+    if(g.arcade&&show?.game===g&&!show.reducedMotion&&show.juice.impactUntil>show.time){const strength=show.juice.impactSize*(show.juice.impactUntil-show.time)*7;c.translate(Math.sin(show.time*97)*strength,Math.cos(show.time*113)*strength*.65);}
+    if(g.shake)c.translate(Math.sin(this.clock*111)*g.shake*8,Math.cos(this.clock*131)*g.shake*7);c.save();c.translate(this.left,-this.cam*s);
     this.floor(g);const start=Math.max(0,Math.floor(this.cam)-1),end=Math.min(ROWS,Math.ceil(this.cam+visible)+1);
     if(!home&&!g.arcade)this.predictions(g,start,end);
     for(const f of g.fluids)this.fluid(f,s);
@@ -39,14 +42,14 @@ export class Renderer{
       if(e.frozen>0){rr(c,(e.rx+.08)*s,(e.ry+.06)*s,s*.84,s*.87,s*.15,'#b7efff22','#c8f4ff');c.fillStyle='#dbf9ff';c.font=`700 ${s*.28}px sans-serif`;c.textAlign='center';c.fillText('❄',(e.rx+.5)*s,(e.ry+.18)*s);}
       else if(e.recovery>0&&!g.arcade){c.fillStyle='#bad6c3';c.font=`700 ${s*.27}px sans-serif`;c.textAlign='center';c.fillText('OPEN',(e.rx+.5)*s,(e.ry-.02)*s);}
       if(e.objective||e.type==='hunter'){c.fillStyle=e.type==='hunter'?'#ffbc96':'#f2d99a';c.font=`700 ${s*.36}px sans-serif`;c.textAlign='center';c.fillText(e.type==='hunter'?'!':'◇',(e.rx+.5)*s,(e.ry-.02)*s);}}
-    if(g.arcade){drawCasualDebris(c,s,g.particles);drawCasualEffects(c,s,g.fx,this.clock);drawFeverImpact(c,s,g,show);}else drawDebris(c,s,g.particles);
+    if(g.arcade){drawCasualDebris(c,s,g.particles);drawCasualEffects(c,s,g.fx,this.clock);drawFeverImpact(c,s,g,show);drawFeverJuice(c,s,g,show);}else drawDebris(c,s,g.particles);
     this.miner(g);
     if(g.arcade){drawFeverDrill(c,s,g);drawFeverGems(c,s,g);}
     if(!g.arcade)drawEffects(c,s,g.fx,this.clock);
     if(g.pulseFx){const f=g.pulseFx,t=1-f.life/.4;c.globalAlpha=(1-t)*.7;c.strokeStyle='#b1f0d3';c.lineWidth=2;c.beginPath();c.arc(f.x*s,f.y*s,s*(.3+t*(f.radius||2)),0,7);c.stroke();c.globalAlpha=1;}
     for(const e of g.enemies)if(e.intent?.y>=start&&e.intent?.y<=end)drawTargetReticle(c,s,e,g.turnBased);
     if(g.collapseFront>this.cam-2){const yy=g.collapseFront*s;c.fillStyle='#242426f2';c.fillRect(0,0,COLS*s,Math.max(0,yy));c.fillStyle='#9b866433';c.fillRect(0,yy,COLS*s,s*.55);c.strokeStyle='#d5b77b77';c.lineWidth=1;c.beginPath();for(let x=0;x<=COLS;x++){const y=yy+Math.sin(x*3+this.clock*5)*s*.11;if(x===0)c.moveTo(0,y);else c.lineTo(x*s,y);}c.stroke();for(let i=0;i<25;i++){const x=(Math.sin(i*42.7)*.5+.5)*COLS*s,y=yy+s*(.2+((this.clock*1.8+i*.37)%1.3));c.fillStyle='#d6b17c33';c.fillRect(x,y,2,2);}}
-    if(g.arcade)drawCasualCaptions(c,s,g.texts);else for(const f of g.texts){c.globalAlpha=Math.min(1,f.life*3);c.font=`800 ${Math.max(10,s*.36)}px sans-serif`;c.textAlign='center';c.lineWidth=3;c.strokeStyle='#142326';c.strokeText(f.s,f.x*s,f.y*s);c.fillStyle=f.color;c.fillText(f.s,f.x*s,f.y*s);}c.globalAlpha=1;c.restore();
+    if(g.arcade)drawCasualCaptions(c,s,g.texts,show?.game===g?show.juice.labels:[]);else for(const f of g.texts){c.globalAlpha=Math.min(1,f.life*3);c.font=`800 ${Math.max(10,s*.36)}px sans-serif`;c.textAlign='center';c.lineWidth=3;c.strokeStyle='#142326';c.strokeText(f.s,f.x*s,f.y*s);c.fillStyle=f.color;c.fillText(f.s,f.x*s,f.y*s);}c.globalAlpha=1;if(g.arcade&&!(show?.banner&&(h<350||show.banner.priority>=2)))drawFeverReadouts(c,s,g,show,this.cam);c.restore();
     const shade=c.createLinearGradient(0,0,0,h);shade.addColorStop(0,g.arcade?'#e5f5ec00':'#050b132c');shade.addColorStop(.15,'#050b1300');shade.addColorStop(.85,'#050b1300');shade.addColorStop(1,g.arcade?'#315c6c12':'#050b1355');c.fillStyle=shade;c.fillRect(0,0,w,h);
     if(g.flash){const edge=c.createRadialGradient(w/2,h/2,h*.13,w/2,h/2,Math.max(w,h)*.68);edge.addColorStop(0,'#ff696900');edge.addColorStop(1,`rgba(255,101,109,${Math.min(.65,g.flash*1.5)})`);c.fillStyle=edge;c.fillRect(0,0,w,h);}
     if(g.arcade&&!home)drawFeverShow(c,w,h,g,show);

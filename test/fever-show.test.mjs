@@ -24,3 +24,15 @@ test('countdown crosses each second once, and restore/retry do not replay old ce
 test('reduced motion keeps announcements and cues without moving particles',()=>{
  const g=new FeverGame(4),show=new FeverShow({reducedMotion:true});show.update(g);show.receive(g,{type:'fever'});assert.equal(show.banner.title,'FEVER!');show.receive(g,{type:'chain',combo:20,count:35});assert.equal(show.confetti.length,0);assert.equal(show.sparks.length,0);assert.equal(show.impacts.length,0);
 });
+
+
+test('crystal showers and kill relays stay bounded, freeze while paused, and clear across sectors',()=>{
+ const g=new FeverGame(11),show=new FeverShow();show.update(g);const before=JSON.stringify(g.serialize()),rng=g.rng.state();
+ for(let i=0;i<200;i++){g.time=i*.02;show.update(g);show.receive(g,{type:'kill',x:5+i%3,y:5});show.receive(g,{type:'chain',count:50,combo:1,x:6,y:5,color:2});}
+ const j=show.juice;assert.ok(j.shards.length>0&&j.shards.length<=48);assert.ok(j.relays.length>0&&j.relays.length<=18);assert.ok(j.pickups.length<=20);assert.ok(j.labels.length<=1);
+ g.mode='pause';const paused=JSON.stringify(j);for(let i=0;i<10;i++)show.update(g);assert.equal(JSON.stringify(j),paused);assert.equal(g.rng.state(),rng);
+ const current=JSON.parse(JSON.stringify(g.serialize()));current.game.state.time=0;current.game.state.mode='play';assert.deepEqual(current,JSON.parse(before));
+ g.sector++;show.update(g);for(const key of ['shards','pickups','relays','labels'])assert.equal(j[key].length,0);assert.equal(j.lastKill,null);
+ show.receive(g,{type:'chain',count:50,combo:1});g.time+=4;show.update(g);for(const key of ['shards','pickups','relays','labels'])assert.equal(j[key].length,0);
+ show.update(new FeverGame(12));assert.equal(show.juice.boost,false);assert.equal(show.juice.lastKill,null);
+});

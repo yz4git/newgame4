@@ -1,9 +1,10 @@
 // Ephemeral presentation only: no world writes, simulation RNG, saves or timers.
 import {star,INK,CANDY} from './casual-world.mjs';
-const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+import {resetJuice,updateJuice,receiveJuice} from './fever-juice.mjs';
 export class FeverShow{
   constructor({reducedMotion=false}={}){this.reducedMotion=reducedMotion;this.game=null;}
-  bind(g){if(this.game===g)return;this.game=g;this.time=g.time;this.remaining=g.fever?.remaining??90;this.active=g.fever?.active??0;this.sector=g.sector;this.sparks=[];this.confetti=[];this.impacts=[];this.banner=null;this.comboBeat=0;this.lastBurst=-1;this.milestone=Math.floor((g.combo||0)/20);this.serial=0;this.entryScore=null;}
+  bind(g){if(this.game===g)return;this.game=g;this.time=g.time;this.remaining=g.fever?.remaining??90;this.active=g.fever?.active??0;this.sector=g.sector;this.sparks=[];this.confetti=[];this.impacts=[];this.banner=null;this.comboBeat=0;this.lastBurst=-1;this.milestone=Math.floor((g.combo||0)/20);this.serial=0;this.entryScore=null;resetJuice(this);}
+  drive(g,boost){this.bind(g);this.juice.boost=!!boost;}
   announce(title,sub,color='#ffcf6a',priority=1,duration=1.25){if(this.banner&&this.banner.until>this.time&&this.banner.priority>priority)return;this.banner={title,sub,color,priority,start:this.time,until:this.time+duration};}
   celebrate(n=30){if(this.reducedMotion)return;for(let i=0;i<n;i++){const k=this.serial++;this.confetti.push({start:this.time,life:1.5+(k%7)*.1,side:k%2,u:(k%11)/11,color:[...CANDY,'#ffd567'][k%5],phase:k*2.4});}this.confetti=this.confetti.slice(-60);}
   burst(x,y,count=12,color='#ffd567'){
@@ -13,7 +14,7 @@ export class FeverShow{
   }
   update(g){
     this.bind(g);if(g.arcade!=='fever')return [];
-    const cues=[],f=g.fever;this.time=g.time;
+    const cues=[],f=g.fever;this.time=g.time;updateJuice(this,g);
     if(g.sector!==this.sector){this.sparks=[];this.impacts=[];this.sector=g.sector;}
     this.sparks=this.sparks.filter(p=>this.time-p.start<p.life);this.confetti=this.confetti.filter(p=>this.time-p.start<p.life);this.impacts=this.impacts.filter(p=>this.time-p.start<.24);
     if(this.banner?.until<=this.time)this.banner=null;
@@ -25,7 +26,7 @@ export class FeverShow{
     this.remaining=f.remaining;this.active=f.active;return cues;
   }
   receive(g,e){
-    this.bind(g);if(g.arcade!=='fever')return [];this.time=g.time;const cues=[];
+    this.bind(g);if(g.arcade!=='fever')return [];this.time=g.time;const cues=receiveJuice(this,g,e);
     if(e.type==='chain'){
       this.comboBeat=this.time+.2;
       this.burst(e.x??g.player.x+.5,e.y??g.player.y+.8,Math.min(18,e.count),CANDY[e.color]||'#ffd567');

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Game} from '../src/engine.mjs';
 import {FeverGame} from '../src/fever.mjs';
+import {FeverShow} from '../src/fever-show.mjs';
 import {Renderer} from '../src/render.mjs';
 
 function recordingContext(){
@@ -42,4 +43,15 @@ test('casual artwork can paint every arcade palette without changing the run or 
     const before=JSON.stringify(g),rng=g.rng.state();freeze(g);r.draw(g);
     assert.equal(JSON.stringify(g),before);assert.equal(g.rng.state(),rng);assert.equal(depth(),0);
   }
+});
+
+
+test('layered fever celebration paints frozen state in both orientations and reduced motion',()=>{
+ for(const reducedMotion of [false,true])for(const [w,h]of [[430,520],[529,272]]){
+  const g=new FeverGame(42),show=new FeverShow({reducedMotion}),{ctx,depth}=recordingContext(),r=new Renderer(ctx,{surfaceFactory:()=>null});
+  g.step(1/60,{rush:true});g.gainFever(100);show.update(g);show.drive(g,true);show.receive(g,{type:'chain',count:60,combo:20,x:6,y:5,color:1});for(let i=0;i<6;i++)show.receive(g,{type:'kill',x:4+i,y:5});
+  g.time+=.1;show.update(g);const before=JSON.stringify(g),presentation=JSON.stringify(show.juice);freeze(g);freeze(show.juice);r.resize(w,h);r.draw(g,0,false,show);
+  assert.equal(JSON.stringify(g),before);assert.equal(JSON.stringify(show.juice),presentation);assert.equal(depth(),0);
+  if(reducedMotion){assert.equal(show.juice.shards.length,0);assert.equal(show.juice.relays.length,0);assert.equal(show.juice.pickups.length,0);}
+ }
 });

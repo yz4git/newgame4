@@ -111,7 +111,7 @@ function frame(now){
         if(game.turnDanger||game.events.some(e=>['hurt','guard'].includes(e.type)))turnInput.suspend();
         hud(true);
       }game.step(dt);
-    }else{accumulator+=dt;while(accumulator>=1/60){game.step(1/60,input());accumulator-=1/60;}}
+    }else{accumulator+=dt;while(accumulator>=1/60){const controls=input();game.step(1/60,controls);if(isFever())feverShow.drive(game,controls.rush);accumulator-=1/60;}}
     for(const cue of feverShow.update(game))sound.play(cue.type,cue);
     for(const event of game.events.splice(0)){
       for(const cue of feverShow.receive(game,event))sound.play(cue.type,cue);
@@ -122,7 +122,7 @@ function frame(now){
   }else accumulator=0;
   renderer.draw(game,dt,home,feverShow);
   const fxActive=!home&&isFever();$('fever-combo').style.setProperty('--combo-pop',fxActive&&feverShow.comboBeat>game.time?'1.06':'1');$('game-shell').classList.toggle('fever-paused',fxActive&&game.mode!=='play');
-  sound.update(!home&&game.mode==='play'&&(!isFever()||game.started),game.stage,isFever()?{arcade:true,fever:game.fever.active>0}:null);hud();requestAnimationFrame(frame);
+  sound.update(!home&&game.mode==='play'&&(!isFever()||game.started),game.stage,isFever()?{arcade:true,fever:game.fever.active>0,boost:feverShow.juice?.boost}:null);hud();requestAnimationFrame(frame);
 }
 if(saved){try{Game.restore(saved,meta);}catch{saved=null;erase(keys.run);}}
 if(savedFever){try{FeverGame.restore(savedFever);}catch{savedFever=null;erase(keys.feverRun);}}
